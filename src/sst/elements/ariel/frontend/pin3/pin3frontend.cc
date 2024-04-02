@@ -132,6 +132,7 @@ Pin3Frontend::Pin3Frontend(ComponentId_t id, Params& params, uint32_t cores, uin
 
     const uint32_t profileFunctions = (uint32_t) params.find<uint32_t>("profilefunctions", 0);
 
+
     output->verbose(CALL_INFO, 1, 0, "Processing application arguments...\n");
 
     uint32_t arg = 0;
@@ -167,6 +168,47 @@ Pin3Frontend::Pin3Frontend(ComponentId_t id, Params& params, uint32_t cores, uin
         execute_args[arg] = (char*) malloc( sizeof(char) * (launch_p.size() + 1) );
         strcpy(execute_args[arg], launch_p.c_str());
         arg++;
+    }
+
+    mpilauncher = params.find<std::string>("mpilauncher");
+    mpiranks = params.find<int>("mpiranks");
+    mpitracerank = params.find<int>("mpitracerank");
+
+    if (mpilauncher.compare("") != 0) {
+        use_mpilauncher = true;
+    } else {
+        use_mpilauncher = false;
+    }
+    /*
+     *
+    redirect_info.stdin_file = params.find<std::string>("appstdin", "");
+    redirect_info.stdout_file = params.find<std::string>("appstdout", "");
+    redirect_info.stderr_file = params.find<std::string>("appstderr", "");
+     */
+
+    // MPI Launcher error checking
+    if (use_mpilauncher) {
+        if (redirect_info.stdin_file.compare("") != 0 || redirect_info.stdout_file.compare("") != 0 || redirect_info.stderr_file.compare("") != 0)  {
+            output->fatal(CALL_INFO, -1, "Using an MPI launcher and redirected I/O is not supported.\n");
+        }
+#ifdef HAVE_CUDA
+        output->fatal(CALL_INFO, -1, "Using an MPI launcher and CUDA is not supported.\n");
+#endif
+        if (mpiranks < 1) {
+            output->fatal(CALL_INFO, -1, "You must specify a positive number for `mpiranks` when using an MPI launhcer. Got %d.\n", mpiranks);
+        }
+        if (mpitracerank < 0 || mpitracerank >= mpiranks) {
+            output->fatal(CALL_INFO, -1, "The value of `mpitracerank` must be in [0,mpiranks) Got %d.\n", mpitracerank);
+        }
+
+    }
+
+
+
+    if (use_mpilauncher) {
+        output->verbose(CALL_INFO, 1, 0, "MPI launcher: %s\n", mpilauncher);
+        output->verbose(CALL_INFO, 1, 0, "MPI ranks: %d\n", mpiranks);
+        output->verbose(CALL_INFO, 1, 0, "MPI trace rank: %d\n", mpitracerank);
     }
 
     free(param_name_buffer);
