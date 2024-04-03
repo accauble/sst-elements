@@ -170,9 +170,9 @@ Pin3Frontend::Pin3Frontend(ComponentId_t id, Params& params, uint32_t cores, uin
         arg++;
     }
 
-    mpilauncher = params.find<std::string>("mpilauncher");
-    mpiranks = params.find<int>("mpiranks");
-    mpitracerank = params.find<int>("mpitracerank");
+    mpilauncher = params.find<std::string>("mpilauncher", "");
+    mpiranks = params.find<int>("mpiranks", 1);
+    mpitracerank = params.find<int>("mpitracerank", 0);
 
     if (mpilauncher.compare("") != 0) {
         use_mpilauncher = true;
@@ -206,7 +206,7 @@ Pin3Frontend::Pin3Frontend(ComponentId_t id, Params& params, uint32_t cores, uin
 
 
     if (use_mpilauncher) {
-        output->verbose(CALL_INFO, 1, 0, "MPI launcher: %s\n", mpilauncher);
+        output->verbose(CALL_INFO, 1, 0, "MPI launcher: %s\n", mpilauncher.c_str());
         output->verbose(CALL_INFO, 1, 0, "MPI ranks: %d\n", mpiranks);
         output->verbose(CALL_INFO, 1, 0, "MPI trace rank: %d\n", mpitracerank);
     }
