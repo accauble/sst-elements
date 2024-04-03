@@ -1836,6 +1836,11 @@ VOID InstrumentRoutine(RTN rtn, VOID* args)
     }
 }
 
+void fork_disable_child_output(THREADID threadid, const CONTEXT *ctx, VOID *v) {
+    fprintf(stderr, "Warning: fesimple cannot trace forked processes. Disabling Pin for pid %d\n", getpid());
+    PIN_Detach();
+}
+
 void loadFastMemLocations()
 {
     std::ifstream infile(UseMallocMap.Value().c_str());
@@ -1997,6 +2002,9 @@ int main(int argc, char *argv[])
             toFast.push_back(mallocFlagInfo(false, 0, 0, 0));
         }
     }
+
+    // Fork callback
+    PIN_AddForkFunction(FPOINT_AFTER_IN_CHILD, (FORK_CALLBACK) fork_disable_child_output, NULL);
 
     fprintf(stderr, "ARIEL: Starting program.\n");
     fflush(stdout);
