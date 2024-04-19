@@ -12,6 +12,7 @@ parser.add_argument('-r', dest='ranks', default=1, help='How many ranks of the t
 parser.add_argument('-a', dest='tracerank', default=0, help='Which of the MPI ranks will be traced.')
 parser.add_argument('-t', dest='threads', default=1, help='The number of OpenMP threads to use per rank.')
 parser.add_argument('-s', dest='size', default=1024, help='The input value for the "reduce" program')
+parser.add_argument('-o', dest='output', help='Optional argument to both programs to change stdout')
 
 args = parser.parse_args()
 
@@ -22,11 +23,8 @@ size      = int(args.size)
 
 if args.program not in ['hello', 'reduce']:
     print('Error: supported values for `program` are "hello" and "reduce".')
-    sys.exit(1)
-
 
 print(f'Running with {mpiranks} ranks and {ncores} threads per rank. Tracing rank {tracerank}. Size {size}')
-sys.exit(0)
 
 os.environ['OMP_NUM_THREADS'] = str(ncores)
 
@@ -54,16 +52,31 @@ core.addParams({
     "executable"   : f"./{args.program}",
     "arielmode"    : 0, # Disable tracing at start
     "corecount"    : ncores,
-    "mpilauncher"  : "./mpilauncher-onenode",
+    "mpilauncher"  : "../../mpi/mpilauncher-onenode",
     "mpiranks"     : mpiranks,
     "mpitracerank" : tracerank,
 })
 
+# Set the size of the reduce vector and optionally set the output file
 if args.program == "reduce":
+    if args.output is not None:
+        core.addParams({
+            "appargcount" : 2,
+            "apparg0" : size,
+            "apparg1" : args.output,
+        })
+    else:
+        core.addParams({
+            "appargcount" : 1,
+            "apparg0" : size,
+        })
+# Set the output file for the hello program
+elif args.output is not None:
     core.addParams({
         "appargcount" : 1,
-        "apparg0" : size,
+        "apparg0" : args.output,
     })
+
 
 # Cache: L1, 2.4GHz, 2KB, 4-way set associative, 64B lines, LRU replacement, MESI coherence
 for i in range(ncores):
