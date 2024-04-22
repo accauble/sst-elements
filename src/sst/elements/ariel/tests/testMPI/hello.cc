@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
     // This is here just to make sure it doesn't crash when the processes try to communicate.
     MPI_Barrier(MPI_COMM_WORLD);
     if (rank == 0) {
-        fprintf(output, "Rank 0: Barrier complete.\n");
+        printf("Rank 0: Barrier complete.\n");
     }
 
     if (argc > 1) {
