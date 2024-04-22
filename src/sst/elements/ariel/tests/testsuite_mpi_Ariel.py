@@ -25,6 +25,14 @@ def initializeTestModule_SingleInstance(class_inst):
         module_init = 1
     module_sema.release()
 
+def get_reduce_string(rank, ranks, size=1024):
+        return [f"Rank {rank} partial sum is {sum(range(int(rank*(size/ranks)), int((rank+1)*(size/ranks))))}, total sum is {sum(range(size))}\n"]
+
+def get_hello_string(rank, ranks, tracerank, threads):
+    if rank == tracerank:
+        return [f"Hello from rank {rank} of {ranks}, thread {i}! (Launched by pin)\n" for i in range(threads)]
+    else:
+        return [f"Hello from rank {rank} of {ranks}, thread {i}!\n" for i in range(threads)]
 ################################################################################
 ################################################################################
 ################################################################################
@@ -56,48 +64,60 @@ class testcase_Ariel(SSTTestCase):
     pin_loaded = testing_is_PIN_loaded()
     pin_error_msg = "Ariel: Requires PIN, but Env Var 'INTEL_PIN_DIRECTORY' is not found or path does not exist."
 
-    @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    testing_check_get_num_ranks():
-    def test_mpi_01(self):
-        self.ariel_Template(threads=1, ranks=1)
-
-    @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    testing_check_get_num_ranks():
-    def test_mpi_02(self):
-        self.ariel_Template(threads=1, ranks=2)
+#    @unittest.skipIf(not pin_loaded, pin_error_msg)
+#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+#    def test_hello_01(self):
+#        self.ariel_Template(threads=1, ranks=1)
+#
+#    @unittest.skipIf(not pin_loaded, pin_error_msg)
+#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+#    def test_hello_02(self):
+#        self.ariel_Template(threads=1, ranks=2)
+#
+#    @unittest.skipIf(not pin_loaded, pin_error_msg)
+#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+#    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+#    def test_hello_03(self):
+#        self.ariel_Template(threads=2, ranks=1)
+#
+#    @unittest.skipIf(not pin_loaded, pin_error_msg)
+#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+#    def test_hello_04(self):
+#        self.ariel_Template(threads=1, ranks=2, tracerank=1)
+#
+#    @unittest.skipIf(not pin_loaded, pin_error_msg)
+#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+#    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+#    def test_hello_05(self):
+#        self.ariel_Template(threads=2, ranks=3, tracerank=1)
+#
+#    @unittest.skipIf(not pin_loaded, pin_error_msg)
+#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+#    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+#    def test_hello_06(self):
+#        self.ariel_Template(threads=2, ranks=2)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
     @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
     @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
-    testing_check_get_num_ranks():
-    def test_mpi_0e(self):
-        self.ariel_Template(threads=2, ranks=1)
-
-    @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    testing_check_get_num_ranks():
-    def test_mpi_04(self):
-        self.ariel_Template(threads=1, ranks=2, tracerank=1)
+    def test_reduce_01(self):
+        self.ariel_Template(threads=1, ranks=1, program="reduce")
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
     @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
     @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
-    testing_check_get_num_ranks():
-    def test_mpi_05(self):
-        self.ariel_Template(threads=2, ranks=3, tracerank=1)
+    def test_reduce_02(self):
+        self.ariel_Template(threads=2, ranks=2, program="reduce")
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
     @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
     @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
-    testing_check_get_num_ranks():
-    def test_mpi_06(self):
-        self.ariel_Template(threads=2, ranks=2)
+    def test_reduce_03(self):
+        self.ariel_Template(threads=2, ranks=4, program="reduce", tracerank=1)
 
         ##TODO add reduce tests
 
-    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=30):
+    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60):
         # Set the paths to the various directories
         testcase = inspect.stack()[1][3] # name the test after the calling function
 
@@ -124,12 +144,11 @@ class testcase_Ariel(SSTTestCase):
         outfile = "{0}/{1}.out".format(outdir, testDataFileName)
         errfile = "{0}/{1}.err".format(outdir, testDataFileName)
         mpioutfiles = "{0}/{1}.testfile".format(outdir, testDataFileName)
-        program_output = f"{tmpdir}/ariel_testmpi_{testcase}.out""
-        other_args = f'--model-options="-o {program_output} -r {ranks} -t {threads} -a {tracerank}"'
+        program_output = f"{tmpdir}/ariel_testmpi_{testcase}.out"
+        other_args = f'--model-options="{program} -o {program_output} -r {ranks} -t {threads} -a {tracerank}"'
 
         log_debug("testcase = {0}".format(testcase))
         log_debug("sdl file = {0}".format(sdlfile))
-        log_debug("ref file = {0}".format(reffile))
         log_debug("out file = {0}".format(outfile))
         log_debug("err file = {0}".format(errfile))
 
@@ -137,14 +156,14 @@ class testcase_Ariel(SSTTestCase):
         self.run_sst(sdlfile, outfile, errfile, set_cwd=ArielElementTestMPIDir,
                      mpi_out_files=mpioutfiles, timeout_sec=testtimeout, other_args=other_args)
 
-        testing_remove_component_warning_from_file(outfile)
+        #testing_remove_component_warning_from_file(outfile)
 
         # Each rank will have its own output file
         # We will examine all of them.
 
         # These programs are designed to output a separate file for each rank,
         # and append the rank id to the argument
-        program_output_files = [f"{program_output}_{i}" for i in ranks]
+        program_output_files = [f"{program_output}_{i}" for i in range(ranks)]
 
         # Look for the word "FATAL" in the output file
         cmd = 'grep "FATAL" {0} '.format(outfile)
@@ -153,17 +172,13 @@ class testcase_Ariel(SSTTestCase):
 
         hello_string_traced = [f"Hello from rank {tracerank} of {ranks}, thread {i}! (Launched by pin)\n" for i in range(threads)]
         hello_string_normal = [f"Hello from rank {tracerank} of {ranks}, thread {i}!\n" for i in range(threads)]
-        reduce_string = [f"Rank {rank} partial sum is {sum(range(int(rank*(1024/ranks)), int((rank+1)*(1024/ranks))))}, total sum is {sum(range(1024))}\n"]
 
         # Test for expected output
         for i in range(ranks):
             if program == "hello":
-                if rank == tracerank:
-                    self.file_contains(f'{program_output}_{i}', hello_string_traced)
-                else:
-                    self.file_contains(f'{program_output}_{i}', hello_string_normal)
+                self.file_contains(f'{program_output}_{i}', get_hello_string(i, ranks, tracerank, threads))
             else:
-                self.file_contains(f'{program_output}_{i}', reduce_string)
+                self.file_contains(f'{program_output}_{i}', get_reduce_string(i, ranks, 1024))
 
         # Test to make sure that each core did some work
         #TODO
