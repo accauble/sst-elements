@@ -8,11 +8,12 @@
 #include "arielapi.h"
 
 #define DEBUG 0
-#define TIMING 0
+#define TIMING 1
 
 int main(int argc, char* argv[]) {
 
-    MPI_Init(&argc, &argv);
+    int prov;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &prov);
 
     if (argc < 2) {
         printf("Too few args\n");

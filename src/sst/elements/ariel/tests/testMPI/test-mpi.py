@@ -11,7 +11,7 @@ parser.add_argument('program', help='Which program to run. Either "hello" or "re
 parser.add_argument('-r', dest='ranks', default=1, help='How many ranks of the traced program to run.')
 parser.add_argument('-a', dest='tracerank', default=0, help='Which of the MPI ranks will be traced.')
 parser.add_argument('-t', dest='threads', default=1, help='The number of OpenMP threads to use per rank.')
-parser.add_argument('-s', dest='size', default=1024, help='The input value for the "reduce" program')
+parser.add_argument('-s', dest='size', default=2048, help='The input value for the "reduce" program')
 parser.add_argument('-o', dest='output', help='Optional argument to both programs to change stdout')
 
 args = parser.parse_args()

@@ -61,6 +61,16 @@ class testcase_Ariel(SSTTestCase):
             for s in strings:
                 self.assertTrue(s in lines, "Output {0} does not contain expected line {1}".format(filename, s))
 
+    
+    def assert_nonzero_stat(self, filename, stat):
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+            for ln in lines:
+                l = ln.split(' ')
+                if l[0] == stat:
+                    stat_value = int(l[12].split(';')[0])
+                    self.assertTrue(stat_value > 0, f"Statistics file `{filename}` did not have a positive value for stat `{stat}`. Line was:\n\t{ln}")
+
     pin_loaded = testing_is_PIN_loaded()
     pin_error_msg = "Ariel: Requires PIN, but Env Var 'INTEL_PIN_DIRECTORY' is not found or path does not exist."
 
@@ -117,7 +127,7 @@ class testcase_Ariel(SSTTestCase):
 
         ##TODO add reduce tests
 
-    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60):
+    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=250000000):
         # Set the paths to the various directories
         testcase = inspect.stack()[1][3] # name the test after the calling function
 
@@ -144,8 +154,9 @@ class testcase_Ariel(SSTTestCase):
         outfile = "{0}/{1}.out".format(outdir, testDataFileName)
         errfile = "{0}/{1}.err".format(outdir, testDataFileName)
         mpioutfiles = "{0}/{1}.testfile".format(outdir, testDataFileName)
+        statfile = f"{ArielElementTestMPIDir}/stats.csv"
         program_output = f"{tmpdir}/ariel_testmpi_{testcase}.out"
-        other_args = f'--model-options="{program} -o {program_output} -r {ranks} -t {threads} -a {tracerank}"'
+        other_args = f'--model-options="{program} -o {program_output} -r {ranks} -t {threads} -a {tracerank} -s {size}"'
 
         log_debug("testcase = {0}".format(testcase))
         log_debug("sdl file = {0}".format(sdlfile))
@@ -170,18 +181,16 @@ class testcase_Ariel(SSTTestCase):
         grep_result = os.system(cmd) != 0
         self.assertTrue(grep_result, "Output file {0} contains the word 'FATAL'...".format(outfile))
 
-        hello_string_traced = [f"Hello from rank {tracerank} of {ranks}, thread {i}! (Launched by pin)\n" for i in range(threads)]
-        hello_string_normal = [f"Hello from rank {tracerank} of {ranks}, thread {i}!\n" for i in range(threads)]
-
         # Test for expected output
         for i in range(ranks):
             if program == "hello":
                 self.file_contains(f'{program_output}_{i}', get_hello_string(i, ranks, tracerank, threads))
             else:
-                self.file_contains(f'{program_output}_{i}', get_reduce_string(i, ranks, 1024))
+                self.file_contains(f'{program_output}_{i}', get_reduce_string(i, ranks, size))
 
         # Test to make sure that each core did some work
-        #TODO
+        for i in range(threads):
+            self.assert_nonzero_stat(statfile, f"cache_{i}.stateEvent_GetS_M")
 
 
 #######################
