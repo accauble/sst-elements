@@ -33,6 +33,13 @@
 #include "builtin_types.h"
 #endif
 
+#if __has_include(<mpi.h>)
+#include <mpi.h>
+#define HAVE_MPI_H
+#endif
+
+int notified = 0;
+
 // TODO add check for PinCRT compatible libz and try to pick that up
 /*#ifdef HAVE_PINCRT_LIBZ
 
@@ -367,6 +374,7 @@ VOID WriteInstructionRead(ADDRINT* address, UINT32 readSize, THREADID thr, ADDRI
     ac.inst.instClass = instClass;
     ac.inst.simdElemCount = simdOpWidth;
 
+    //printf("fesimple.cc: patrick: writing end instuction marker\n");
     tunnel->writeMessage(thr, ac);
 }
 
@@ -409,6 +417,7 @@ VOID WriteStartInstructionMarker(UINT32 thr, ADDRINT ip, UINT32 instClass, UINT3
     ac.instPtr = (uint64_t) ip;
     ac.inst.simdElemCount = simdOpWidth;
     ac.inst.instClass = instClass;
+    //printf("fesimple.cc: patrick: writing start instuction marker\n");
     tunnel->writeMessage(thr, ac);
 }
 
@@ -417,6 +426,7 @@ VOID WriteEndInstructionMarker(UINT32 thr, ADDRINT ip)
     ArielCommand ac;
     ac.command = ARIEL_END_INSTRUCTION;
     ac.instPtr = (uint64_t) ip;
+    //printf("fesimple.cc: patrick: writing end instuction marker\n");
     tunnel->writeMessage(thr, ac);
 }
 
@@ -446,6 +456,8 @@ VOID WriteInstructionReadOnly(THREADID thr, ADDRINT* readAddr, UINT32 readSize, 
             WriteInstructionRead(  readAddr,  readSize,  thr, ip, instClass, simdOpWidth );
             if (last)
                 WriteEndInstructionMarker(thr, ip);
+        } else if (thr > core_count + 1){
+            printf(" PAT -> NO OUTPUT because thr >= core_count (%d >= %d)\n", thr, core_count);
         }
     }
 
@@ -690,6 +702,53 @@ void mapped_ariel_enable()
     fflush(stderr);
 }
 
+/* Intercept ariel_disable() in application & start simulating instructions */
+void mapped_ariel_disable()
+{
+
+    // Note
+    // By adding clock offset calculation, this function now has visible side-effects when called more than once
+    // In most cases won't matter -> ariel_disable() called once or close together in time so offsets will stabilize quickly
+    // In some cases could cause a big jump in time in the middle of simulation -> ariel_disable() left in app but mode is always-on
+    // So, update ariel_disable & offsets in lock & don't update if already enabled
+
+    /* LOCK */
+    THREADID thr = PIN_ThreadId();
+    PIN_GetLock(&mainLock, thr);
+
+    if (!enable_output) {
+        PIN_ReleaseLock(&mainLock);
+        return;
+    }
+
+    // TODO: I just copied these timers from enable. Need to figure out what to do with them here
+    // so that we can re-enable properly later.
+    // Setup timers to count start time + elapsed simulated time
+    struct timeval tvsim;
+    gettimeofday(&offset_tv, NULL);
+    tunnel->getTime(&tvsim);
+    offset_tv.tv_sec -= tvsim.tv_sec;
+    offset_tv.tv_usec -= tvsim.tv_usec;
+#if ! defined(__APPLE__)
+    struct timespec tpsim;
+    tunnel->getTimeNs(&tpsim);
+    offset_tp_mono.tv_sec = tvsim.tv_sec - tpsim.tv_sec;
+    offset_tp_mono.tv_nsec = (tvsim.tv_usec * 1000) - tpsim.tv_nsec;
+    offset_tp_real.tv_sec = tvsim.tv_sec - tpsim.tv_sec;
+    offset_tp_real.tv_nsec = (tvsim.tv_usec * 1000) - tpsim.tv_nsec;
+#endif
+    /* DISABLE */
+    enable_output = false;
+
+    /* UNLOCK */
+    PIN_ReleaseLock(&mainLock);
+
+    fprintf(stderr, "ARIEL: Disabling memory and instruction tracing from program control at simulated Ariel cycle %" PRIu64 ".\n",
+            tunnel->getCycles());
+    fflush(stdout);
+    fflush(stderr);
+}
+
 /* Return the current cycle count from Ariel */
 uint64_t mapped_ariel_cycles()
 {
@@ -785,6 +844,46 @@ void mapped_ariel_fence(void *virtualAddress)
     ADDRINT ip = IARG_INST_PTR;
 
     WriteFenceInstructionMarker(thr, ip);
+}
+
+/*
+int mapped_MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
+{
+#if defined(HAVE_MPI_H) && defined(_OPENMP)
+    printf("PATRICK -- attempting to initialize openmp\n");
+    int x = 0;
+#pragma omp parallel
+    {
+#pragma omp critical
+        {
+            x += 1;
+        }
+    }
+    return PMPI_Init_thread(argc, argv, required, provided);
+#elif defined(HAVE_MPI_H)
+    printf("fesimple.cc: ERROR: MPI_Init called but this file was compiled without OpenMP support, so we can't initialize properly\n");
+    exit(1);
+#elif defined(_OPENMP)
+    printf("fesimple.cc: ERROR: MPI_Init called but this file was compiled without MPI support, so we can't call PMPI_Init properly\n");
+    exit(1);
+#else
+    printf("fesimple.cc: ERROR: MPI_Init called but this file was compiled without OpenMP and without MPI.\n");
+    exit(1);
+#endif
+    //unreachable
+}
+*/
+
+void mapped_notify_fesimple() {
+    notified = 1;
+}
+
+int check_for_api_mpi_init() {
+    if (!notified && !getenv("DISABLE_ARIEL_API_MPI_INIT_CHECK")) {
+        fprintf(stderr, "Error: fesimple.cc: The Ariel API verion of MPI_Init_{thread} was not used, which can result in errors when used in conjunction with OpenMP. Please link against the Ariel API (included in this distribution at src/sst/elements/ariel/api) or disable this message by setting the environment variable `ARIEL_API_MPI_INIT`\n");
+        exit(1);
+    }
+    return 0;
 }
 
 int ariel_mlm_memcpy(void* dest, void* source, size_t size) {
@@ -1664,6 +1763,11 @@ VOID InstrumentRoutine(RTN rtn, VOID* args)
             enable_output = false;
         }
         return;
+    } else if (RTN_Name(rtn) == "ariel_disable" || RTN_Name(rtn) == "_ariel_disable" || RTN_Name(rtn) == "__arielfort_MOD_ariel_disable") {
+        fprintf(stderr,"Identified routine: ariel_disable, replacing with Ariel equivalent...\n");
+        RTN_Replace(rtn, (AFUNPTR) mapped_ariel_disable);
+        fprintf(stderr,"Replacement complete.\n");
+        return;
     } else if (RTN_Name(rtn) == "gettimeofday" || RTN_Name(rtn) == "_gettimeofday") {
         fprintf(stderr,"Identified routine: gettimeofday, replacing with Ariel equivalent...\n");
         RTN_Replace(rtn, (AFUNPTR) mapped_gettimeofday);
@@ -1673,6 +1777,19 @@ VOID InstrumentRoutine(RTN rtn, VOID* args)
         fprintf(stderr, "Identified routine: ariel_cycles, replacing with Ariel equivalent..\n");
         RTN_Replace(rtn, (AFUNPTR) mapped_ariel_cycles);
         fprintf(stderr, "Replacement complete\n");
+        return;
+    } else if (RTN_Name(rtn) == "MPI_Init_thread" || RTN_Name(rtn) == "_MPI_Init_thread") {
+        fprintf(stderr, "Identified routine: MPI_Init_thread. Instrumenting.\n");
+        RTN_Open(rtn);
+        //RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR) before_api_call, IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
+        RTN_InsertCall(rtn, IPOINT_AFTER, (AFUNPTR) check_for_api_mpi_init, IARG_END);
+        RTN_Close(rtn);
+        fprintf(stderr, "Instrumentation complete\n");
+    } else if (RTN_Name(rtn) == "notify_fesimple" || RTN_Name(rtn) == "_notify_fesimple") {
+        fprintf(stderr, "Replacing notify_fesimple with mapped_notify_fesimple.\n");
+        RTN_Replace(rtn, (AFUNPTR) mapped_notify_fesimple);
+        fprintf(stderr, "Replacement complete\n");
+        return;
         return;
 #if ! defined(__APPLE__)
     } else if (RTN_Name(rtn) == "clock_gettime" || RTN_Name(rtn) == "_clock_gettime" ||
@@ -1833,6 +1950,8 @@ VOID InstrumentRoutine(RTN rtn, VOID* args)
             RTN_Replace(rtn, (AFUNPTR) mapped_ariel_malloc_flag_fortran);
             return;
         }
+    } else {
+        //printf("PATRICK -- not replacing: %s\n", RTN_Name(rtn).c_str());
     }
 }
 
@@ -1918,6 +2037,7 @@ int main(int argc, char *argv[])
 // Pin version specific tunnel attach
     tunnelmgr = new SST::Core::Interprocess::MMAPChild_Pin3<ArielTunnel>(SSTNamedPipe.Value());
     tunnel = tunnelmgr->getTunnel();
+    //printf("fesimple.cc: patrick : got tunnel, %s\n", SSTNamedPipe.Value().c_str());
 #ifdef HAVE_CUDA
     tunnelRmgr = new SST::Core::Interprocess::MMAPChild_Pin3<GpuReturnTunnel>(SSTNamedPipe2.Value());
     tunnelDmgr = new SST::Core::Interprocess::MMAPChild_Pin3<GpuDataTunnel>(SSTNamedPipe3.Value());

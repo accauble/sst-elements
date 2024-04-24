@@ -15,12 +15,21 @@
 
 #include "arielapi.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
+#if __has_include(<mpi.h>)
+#include <mpi.h>
+#define HAVE_MPI_H
+#endif
 
 /* These definitions are replaced during simulation */
 
 void ariel_enable() {
     printf("ARIEL: ENABLE called in Ariel API.\n");
+}
+
+void ariel_disable() {
+    printf("ARIEL: DISABLE called in Ariel API.\n");
 }
 
 void ariel_fence() {
@@ -37,4 +46,51 @@ void ariel_output_stats() {
 
 void ariel_malloc_flag(int64_t id, int count, int level) {
     printf("ARIEL: flagging next %d mallocs at id %" PRId64 "\n", count, id);
+}
+
+void run_omp_parallel_region() {
+    volatile int x = 0;
+#if defined(_OPENMP)
+#pragma omp parallel
+    {
+#pragma omp critical
+        {
+            x += 1;
+        }
+    }
+#else
+    printf("ERROR: libarielapi.c: libarielapi was compiled without OpenMP enabled\n");
+    exit(1);
+#endif
+
+}
+
+int notify_fesimple() {
+    printf("notifying fesimple\n");
+}
+
+int MPI_Init(int *argc, char ***argv) {
+    run_omp_parallel_region();
+#ifdef HAVE_MPI_H
+    // Communicate to the frontend that we have replaced the nomal MPI_Init with
+    // the one in the Ariel API
+    notify_fesimple();
+    return PMPI_Init(argc, argv);
+#else
+    printf("Error: arielapi.c: MPI_Init called in arielapi.c but this file was compiled without MPI. Please recompile the API with `CC=mpicc make`.\n");
+    exit(1);
+#endif
+}
+
+int MPI_Init_thread(int *argc, char ***argv, int required, int *provided) {
+    run_omp_parallel_region();
+#ifdef HAVE_MPI_H
+    // Communicate to the frontend that we have replaced the nomal MPI_Init_thread with
+    // the one in the Ariel API
+    notify_fesimple();
+    return PMPI_Init_thread(argc, argv, required, provided);
+#else
+    printf("Error: arielapi.c: MPI_Init_thread called in arielapi.c but this file was compiled without MPI. Please recompile the API with `CC=mpicc make`.\n");
+    exit(1);
+#endif
 }
