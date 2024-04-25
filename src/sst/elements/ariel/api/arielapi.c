@@ -71,7 +71,7 @@ void omp_parallel_region() {
 // This function only exists to get mapped by the frontend. It should only be called
 // from MPI_Init or MPI_Init_thread to allow the frontend to distinguish between our
 // custom versions of of those functions and the normal MPI library's versions.
-int _arielapi_mpi_init() {
+int _api_mpi_init() {
     printf("notifying fesimple\n");
 }
 
@@ -81,7 +81,7 @@ int MPI_Init(int *argc, char ***argv) {
 #ifdef HAVE_MPI_H
     // Communicate to the frontend that we have replaced the nomal MPI_Init with
     // the one in the Ariel API
-    _arielapi_mpi_init();
+    _api_mpi_init();
     omp_parallel_region();
     return PMPI_Init(argc, argv);
 #else
@@ -96,7 +96,7 @@ int MPI_Init_thread(int *argc, char ***argv, int required, int *provided) {
 #ifdef HAVE_MPI_H
     // Communicate to the frontend that we have replaced the nomal MPI_Init_thread with
     // the one in the Ariel API
-    _arielapi_mpi_init();
+    _api_mpi_init();
     omp_parallel_region();
     return PMPI_Init_thread(argc, argv, required, provided);
 #else

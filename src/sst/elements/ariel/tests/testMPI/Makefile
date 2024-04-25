@@ -10,7 +10,7 @@ all: $(TARGETS)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 libarielapi:
-	$(MAKE) $(API_DIR)
+	CC=mpicc $(MAKE) -C $(API_DIR)
 
 clean:
 	rm -rf $(TARGETS)

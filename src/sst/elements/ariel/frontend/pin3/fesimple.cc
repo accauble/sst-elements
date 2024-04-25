@@ -38,7 +38,6 @@
 #define HAVE_MPI_H
 #endif
 
-int notified = 0;
 
 // TODO add check for PinCRT compatible libz and try to pick that up
 /*#ifdef HAVE_PINCRT_LIBZ
@@ -137,10 +136,14 @@ GpuDataTunnel *tunnelD = NULL;
 
 // Time function interception
 struct timeval offset_tv;
+int timer_initialized = 0;
 #if !defined(__APPLE__)
 struct timespec offset_tp_mono;
 struct timespec offset_tp_real;
 #endif
+
+// MPI
+int api_mpi_init_used = 0;
 
 /****************************************************************/
 /********************** SHADOW STACK ****************************/
@@ -677,20 +680,24 @@ void mapped_ariel_enable()
     }
 
     // Setup timers to count start time + elapsed simulated time
-    struct timeval tvsim;
-    gettimeofday(&offset_tv, NULL);
-    tunnel->getTime(&tvsim);
-    offset_tv.tv_sec -= tvsim.tv_sec;
-    offset_tv.tv_usec -= tvsim.tv_usec;
+    // Only do this the first time Ariel is enabled
+    if (!timer_initialized) {
+        timer_initialized = 1;
+        struct timeval tvsim;
+        gettimeofday(&offset_tv, NULL);
+        tunnel->getTime(&tvsim);
+        offset_tv.tv_sec -= tvsim.tv_sec;
+        offset_tv.tv_usec -= tvsim.tv_usec;
 #if ! defined(__APPLE__)
-    struct timespec tpsim;
-    tunnel->getTimeNs(&tpsim);
-    offset_tp_mono.tv_sec = tvsim.tv_sec - tpsim.tv_sec;
-    offset_tp_mono.tv_nsec = (tvsim.tv_usec * 1000) - tpsim.tv_nsec;
-    offset_tp_real.tv_sec = tvsim.tv_sec - tpsim.tv_sec;
-    offset_tp_real.tv_nsec = (tvsim.tv_usec * 1000) - tpsim.tv_nsec;
+        struct timespec tpsim;
+        tunnel->getTimeNs(&tpsim);
+        offset_tp_mono.tv_sec = tvsim.tv_sec - tpsim.tv_sec;
+        offset_tp_mono.tv_nsec = (tvsim.tv_usec * 1000) - tpsim.tv_nsec;
+        offset_tp_real.tv_sec = tvsim.tv_sec - tpsim.tv_sec;
+        offset_tp_real.tv_nsec = (tvsim.tv_usec * 1000) - tpsim.tv_nsec;
 #endif
     /* ENABLE */
+    }
     enable_output = true;
 
     /* UNLOCK */
@@ -846,41 +853,13 @@ void mapped_ariel_fence(void *virtualAddress)
     WriteFenceInstructionMarker(thr, ip);
 }
 
-/*
-int mapped_MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
-{
-#if defined(HAVE_MPI_H) && defined(_OPENMP)
-    printf("PATRICK -- attempting to initialize openmp\n");
-    int x = 0;
-#pragma omp parallel
-    {
-#pragma omp critical
-        {
-            x += 1;
-        }
-    }
-    return PMPI_Init_thread(argc, argv, required, provided);
-#elif defined(HAVE_MPI_H)
-    printf("fesimple.cc: ERROR: MPI_Init called but this file was compiled without OpenMP support, so we can't initialize properly\n");
-    exit(1);
-#elif defined(_OPENMP)
-    printf("fesimple.cc: ERROR: MPI_Init called but this file was compiled without MPI support, so we can't call PMPI_Init properly\n");
-    exit(1);
-#else
-    printf("fesimple.cc: ERROR: MPI_Init called but this file was compiled without OpenMP and without MPI.\n");
-    exit(1);
-#endif
-    //unreachable
-}
-*/
-
-void mapped_notify_fesimple() {
-    notified = 1;
+void mapped_api_mpi_init() {
+    api_mpi_init_used = 1;
 }
 
 int check_for_api_mpi_init() {
-    if (!notified && !getenv("DISABLE_ARIEL_API_MPI_INIT_CHECK")) {
-        fprintf(stderr, "Error: fesimple.cc: The Ariel API verion of MPI_Init_{thread} was not used, which can result in errors when used in conjunction with OpenMP. Please link against the Ariel API (included in this distribution at src/sst/elements/ariel/api) or disable this message by setting the environment variable `ARIEL_API_MPI_INIT`\n");
+    if (!api_mpi_init_used && !getenv("ARIEL_DISABLE_MPI_INIT_CHECK")) {
+        fprintf(stderr, "Error: fesimple.cc: The Ariel API verion of MPI_Init_{thread} was not used, which can result in errors when used in conjunction with OpenMP. Please link against the Ariel API (included in this distribution at src/sst/elements/ariel/api) or disable this message by setting the environment variable `ARIEL_DISABLE_MPI_INIT_CHECK`\n");
         exit(1);
     }
     return 0;
@@ -1778,16 +1757,21 @@ VOID InstrumentRoutine(RTN rtn, VOID* args)
         RTN_Replace(rtn, (AFUNPTR) mapped_ariel_cycles);
         fprintf(stderr, "Replacement complete\n");
         return;
-    } else if (RTN_Name(rtn) == "MPI_Init_thread" || RTN_Name(rtn) == "_MPI_Init_thread") {
-        fprintf(stderr, "Identified routine: MPI_Init_thread. Instrumenting.\n");
+    } else if (RTN_Name(rtn) == "MPI_Init" || RTN_Name(rtn) == "_MPI_Init") {
+        fprintf(stderr, "Identified routine: MPI_Init. Instrumenting.\n");
         RTN_Open(rtn);
-        //RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR) before_api_call, IARG_FUNCARG_ENTRYPOINT_VALUE, 0, IARG_END);
         RTN_InsertCall(rtn, IPOINT_AFTER, (AFUNPTR) check_for_api_mpi_init, IARG_END);
         RTN_Close(rtn);
         fprintf(stderr, "Instrumentation complete\n");
-    } else if (RTN_Name(rtn) == "notify_fesimple" || RTN_Name(rtn) == "_notify_fesimple") {
-        fprintf(stderr, "Replacing notify_fesimple with mapped_notify_fesimple.\n");
-        RTN_Replace(rtn, (AFUNPTR) mapped_notify_fesimple);
+    } else if (RTN_Name(rtn) == "MPI_Init_thread" || RTN_Name(rtn) == "_MPI_Init_thread") {
+        fprintf(stderr, "Identified routine: MPI_Init_thread. Instrumenting.\n");
+        RTN_Open(rtn);
+        RTN_InsertCall(rtn, IPOINT_AFTER, (AFUNPTR) check_for_api_mpi_init, IARG_END);
+        RTN_Close(rtn);
+        fprintf(stderr, "Instrumentation complete\n");
+    } else if (RTN_Name(rtn) == "api_mpi_init" || RTN_Name(rtn) == "_api_mpi_init") {
+        fprintf(stderr, "Replacing api_mpi_init with mapped_api_mpi_init.\n");
+        RTN_Replace(rtn, (AFUNPTR) mapped_api_mpi_init);
         fprintf(stderr, "Replacement complete\n");
         return;
         return;

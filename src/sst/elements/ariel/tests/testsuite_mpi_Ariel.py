@@ -4,6 +4,7 @@ from sst_unittest import *
 from sst_unittest_support import *
 import os
 import inspect
+import subprocess
 
 ################################################################################
 # Code to support a single instance module initialize, must be called setUp method
@@ -132,7 +133,7 @@ class testcase_Ariel(SSTTestCase):
     def test_reduce_03(self):
         self.ariel_Template(threads=2, ranks=4, program="reduce", tracerank=1)
 
-    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=16000):
+    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=8000):
         # Set the paths to the various directories
         testcase = inspect.stack()[1][3] # name the test after the calling function
 
@@ -210,9 +211,11 @@ class testcase_Ariel(SSTTestCase):
         self.ArielElementDir = os.path.abspath("{0}/../".format(test_path))
         self.ArielElementTestMPIDir = "{0}/tests/testMPI".format(self.ArielElementDir)
 
-        # Build the Ariel API library
+        # Build the Ariel API library with mpicc
         ArielApiDir = "{0}/api".format(self.ArielElementDir)
-        cmd = "make"
+        cmd = "make clean"
+        OSCommand(cmd, set_cwd=ArielApiDir).run()
+        cmd = "CC=mpicc make"
         rtn0 = OSCommand(cmd, set_cwd=ArielApiDir).run()
         log_debug("Ariel api/libarielapi.so Make result = {0}; output =\n{1}".format(rtn0.result(), rtn0.output()))
         os.environ["ARIELAPI"] =  ArielApiDir

@@ -63,6 +63,7 @@ int main(int argc, char* argv[]) {
 
     // This is here just to make sure it doesn't crash when the processes try to communicate.
     MPI_Barrier(MPI_COMM_WORLD);
+    ariel_disable();
     if (rank == 0) {
         printf("Rank 0: Barrier complete.\n");
     }
