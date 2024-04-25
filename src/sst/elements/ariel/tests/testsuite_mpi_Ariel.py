@@ -24,6 +24,8 @@ def initializeTestModule_SingleInstance(class_inst):
             pass
         module_init = 1
     module_sema.release()
+################################################################################
+# Functions to support parsing the output of the MPI tests
 
 def get_reduce_string(rank, ranks, size=1024):
         return [f"Rank {rank} partial sum is {sum(range(int(rank*(size/ranks)), int((rank+1)*(size/ranks))))}, total sum is {sum(range(size))}\n"]
@@ -34,9 +36,6 @@ def get_hello_string(rank, ranks, tracerank, threads):
     else:
         return [f"Hello from rank {rank} of {ranks}, thread {i}!\n" for i in range(threads)]
 ################################################################################
-################################################################################
-################################################################################
-
 
 class testcase_Ariel(SSTTestCase):
 
@@ -54,14 +53,17 @@ class testcase_Ariel(SSTTestCase):
         # Put test based teardown code here. it is called once after every test
         super(type(self), self).tearDown()
 
-#####
+    # Test that the output contains the specified line. Because the programs are
+    # Multithreaded, we cannot know ahead of time which line will match. The
+    # programs use #pragma critical so we expect that the output from each thread
+    # will be on its own line.
     def file_contains(self, filename, strings):
         with open(filename, 'r') as file:
             lines = file.readlines()
             for s in strings:
                 self.assertTrue(s in lines, "Output {0} does not contain expected line {1}".format(filename, s))
 
-    
+    # Test that the stats file `filename` has a non-zero value for statistics `stat`.
     def assert_nonzero_stat(self, filename, stat):
         with open(filename, 'r') as file:
             lines = file.readlines()
@@ -74,58 +76,61 @@ class testcase_Ariel(SSTTestCase):
     pin_loaded = testing_is_PIN_loaded()
     pin_error_msg = "Ariel: Requires PIN, but Env Var 'INTEL_PIN_DIRECTORY' is not found or path does not exist."
 
+    multi_rank = testing_check_get_num_ranks() > 1
+    multi_rank_error_msg = "Ariel: Ariel MPI tests are not compatible with multi-rank sst runs."
+
+    using_osx = host_os_is_osx()
+    osx_error_msg = "Ariel: OpenMP is not supported on macOS"
+
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
     def test_hello_01(self):
         self.ariel_Template(threads=1, ranks=1)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
     def test_hello_02(self):
         self.ariel_Template(threads=1, ranks=2)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
+    @unittest.skipIf(using_osx, osx_error_msg)
     def test_hello_03(self):
         self.ariel_Template(threads=2, ranks=1)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
     def test_hello_04(self):
         self.ariel_Template(threads=1, ranks=2, tracerank=1)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
+    @unittest.skipIf(using_osx, osx_error_msg)
     def test_hello_05(self):
         self.ariel_Template(threads=2, ranks=3, tracerank=1)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
+    @unittest.skipIf(using_osx, osx_error_msg)
     def test_hello_06(self):
         self.ariel_Template(threads=2, ranks=2)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
     def test_reduce_01(self):
         self.ariel_Template(threads=1, ranks=1, program="reduce")
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
+    @unittest.skipIf(using_osx, osx_error_msg)
     def test_reduce_02(self):
         self.ariel_Template(threads=2, ranks=2, program="reduce")
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
-    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    @unittest.skipIf(multi_rank, multi_rank_error_msg)
+    @unittest.skipIf(using_osx, osx_error_msg)
     def test_reduce_03(self):
         self.ariel_Template(threads=2, ranks=4, program="reduce", tracerank=1)
-
-        ##TODO add reduce tests
 
     def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=16000):
         # Set the paths to the various directories
@@ -167,8 +172,6 @@ class testcase_Ariel(SSTTestCase):
         self.run_sst(sdlfile, outfile, errfile, set_cwd=ArielElementTestMPIDir,
                      mpi_out_files=mpioutfiles, timeout_sec=testtimeout, other_args=other_args)
 
-        #testing_remove_component_warning_from_file(outfile)
-
         # Each rank will have its own output file
         # We will examine all of them.
 
@@ -176,7 +179,7 @@ class testcase_Ariel(SSTTestCase):
         # and append the rank id to the argument
         program_output_files = [f"{program_output}_{i}" for i in range(ranks)]
 
-        # Look for the word "FATAL" in the output file
+        # Look for the word "FATAL" in the sst output file
         cmd = 'grep "FATAL" {0} '.format(outfile)
         grep_result = os.system(cmd) != 0
         self.assertTrue(grep_result, "Output file {0} contains the word 'FATAL'...".format(outfile))
