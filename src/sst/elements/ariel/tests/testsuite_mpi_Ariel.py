@@ -74,38 +74,38 @@ class testcase_Ariel(SSTTestCase):
     pin_loaded = testing_is_PIN_loaded()
     pin_error_msg = "Ariel: Requires PIN, but Env Var 'INTEL_PIN_DIRECTORY' is not found or path does not exist."
 
-#    @unittest.skipIf(not pin_loaded, pin_error_msg)
-#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-#    def test_hello_01(self):
-#        self.ariel_Template(threads=1, ranks=1)
-#
-#    @unittest.skipIf(not pin_loaded, pin_error_msg)
-#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-#    def test_hello_02(self):
-#        self.ariel_Template(threads=1, ranks=2)
-#
-#    @unittest.skipIf(not pin_loaded, pin_error_msg)
-#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-#    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
-#    def test_hello_03(self):
-#        self.ariel_Template(threads=2, ranks=1)
-#
-#    @unittest.skipIf(not pin_loaded, pin_error_msg)
-#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-#    def test_hello_04(self):
-#        self.ariel_Template(threads=1, ranks=2, tracerank=1)
-#
-#    @unittest.skipIf(not pin_loaded, pin_error_msg)
-#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-#    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
-#    def test_hello_05(self):
-#        self.ariel_Template(threads=2, ranks=3, tracerank=1)
-#
-#    @unittest.skipIf(not pin_loaded, pin_error_msg)
-#    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
-#    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
-#    def test_hello_06(self):
-#        self.ariel_Template(threads=2, ranks=2)
+    @unittest.skipIf(not pin_loaded, pin_error_msg)
+    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    def test_hello_01(self):
+        self.ariel_Template(threads=1, ranks=1)
+
+    @unittest.skipIf(not pin_loaded, pin_error_msg)
+    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    def test_hello_02(self):
+        self.ariel_Template(threads=1, ranks=2)
+
+    @unittest.skipIf(not pin_loaded, pin_error_msg)
+    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    def test_hello_03(self):
+        self.ariel_Template(threads=2, ranks=1)
+
+    @unittest.skipIf(not pin_loaded, pin_error_msg)
+    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    def test_hello_04(self):
+        self.ariel_Template(threads=1, ranks=2, tracerank=1)
+
+    @unittest.skipIf(not pin_loaded, pin_error_msg)
+    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    def test_hello_05(self):
+        self.ariel_Template(threads=2, ranks=3, tracerank=1)
+
+    @unittest.skipIf(not pin_loaded, pin_error_msg)
+    @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
+    @unittest.skipIf(host_os_is_osx(), "Ariel: Open MP is not supported on OSX.")
+    def test_hello_06(self):
+        self.ariel_Template(threads=2, ranks=2)
 
     @unittest.skipIf(not pin_loaded, pin_error_msg)
     @unittest.skipIf(testing_check_get_num_ranks() > 1, "Ariel: test_mpi skipped if ranks > 1 - Sandy Bridge test is incompatible with Multi-Rank.")
@@ -127,7 +127,7 @@ class testcase_Ariel(SSTTestCase):
 
         ##TODO add reduce tests
 
-    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=250000000):
+    def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=16000):
         # Set the paths to the various directories
         testcase = inspect.stack()[1][3] # name the test after the calling function
 
@@ -188,9 +188,10 @@ class testcase_Ariel(SSTTestCase):
             else:
                 self.file_contains(f'{program_output}_{i}', get_reduce_string(i, ranks, size))
 
-        # Test to make sure that each core did some work
+        # Test to make sure that each core did some work and sent something to its L1
         for i in range(threads):
-            self.assert_nonzero_stat(statfile, f"cache_{i}.stateEvent_GetS_M")
+            self.assert_nonzero_stat(statfile, f"core.read_requests.{i}")
+            self.assert_nonzero_stat(statfile, f"cache_{i}.CacheMisses")
 
 
 #######################

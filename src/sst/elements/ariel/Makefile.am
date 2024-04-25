@@ -76,6 +76,8 @@ EXTRA_DIST = \
 	frontend/simple/examples/stream/tests/refFiles/test_Ariel_runstreamNB.out \
 	frontend/simple/examples/stream/tests/refFiles/test_Ariel_runstreamSt.out \
 	tests/testsuite_default_Ariel.py \
+	tests/testsuite_testio_Ariel.py \
+	tests/testsuite_mpi_Ariel.py \
 	tests/testopenMP/ompmybarrier/ompmybarrier.c \
 	tests/testopenMP/ompmybarrier/Makefile
 
