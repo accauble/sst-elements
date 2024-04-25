@@ -24,15 +24,14 @@ size      = int(args.size)
 if args.program not in ['hello', 'reduce']:
     print('Error: supported values for `program` are "hello" and "reduce".')
 
-print(f'Running with {mpiranks} ranks and {ncores} threads per rank. Tracing rank {tracerank}. Size {size}')
+program_string = f'./{args.program}'
+if args.program == 'reduce':
+    program_string += f' (size={size})'
+
+print(f'mpi-test.py: Running {program_string} with {mpiranks} rank(s) and {ncores} thread(s) per rank. Tracing rank {tracerank}')
 
 os.environ['OMP_NUM_THREADS'] = str(ncores)
 
-#########################################################################
-## Define SST core options
-#########################################################################
-# If this demo gets to 100ms, something has gone very wrong!
-sst.setProgramOption("stop-at", "200ms")
 
 #########################################################################
 ## Declare components
@@ -114,7 +113,6 @@ core_cache = [sst.Link("core_to_cache_"+str(i)) for i in range(ncores)]
 cache_bus  = [sst.Link("cache_" + str(i) + "_to_bus") for i in range(ncores)]
 bus_mem    = sst.Link("bus_to_memory")
 
-
 #########################################################################
 ## Connect components with the links
 #########################################################################
@@ -122,14 +120,11 @@ bus_mem    = sst.Link("bus_to_memory")
 [cache_bus[i].connect( (cache[i], "low_network_0", "100ps"), (bus, "high_network_"+str(i), "100ps") ) for i in range(ncores)]
 bus_mem.connect( (bus, "low_network_0", "100ps"), (memctrl, "direct_link", "100ps") )
 
+#########################################################################
+## Define SST core options
+#########################################################################
+sst.setProgramOption("stop-at", "200ms")
 sst.setStatisticOutput("sst.statoutputtxt")
-
-# Send the statistics to a fiel called 'stats.csv'
 sst.setStatisticOutputOptions( { "filepath"  : "stats.csv" })
-
-# Print statistics of level 5 and below (0-5)
 sst.setStatisticLoadLevel(5)
-
-# Enable statistics for all the component
 sst.enableAllStatisticsForAllComponents()
-################################ The End ################################
