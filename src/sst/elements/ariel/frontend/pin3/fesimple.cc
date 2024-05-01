@@ -377,6 +377,9 @@ VOID WriteInstructionRead(ADDRINT* address, UINT32 readSize, THREADID thr, ADDRI
     ac.inst.instClass = instClass;
     ac.inst.simdElemCount = simdOpWidth;
 
+   // fprintf(stderr, "ACC: ARIEL_PERFORM_READ: %#lx, %#lx\n", ac.instPtr,
+   //   ac.inst.addr);
+
     tunnel->writeMessage(thr, ac);
 }
 
@@ -409,6 +412,9 @@ VOID WriteInstructionWrite(ADDRINT* address, UINT32 writeSize, THREADID thr, ADD
     }
     printf("\n");
 */
+
+//    fprintf(stderr, "ACC: ARIEL_PERFORM_WRITE: %#x, %#lx, %#lx, %d\n",
+//      thr, ac.instPtr, ac.inst.addr, ac.inst.size);
     tunnel->writeMessage(thr, ac);
 }
 
@@ -463,14 +469,14 @@ VOID WriteInstructionReadOnly(THREADID thr, ADDRINT* readAddr, UINT32 readSize, 
 
 VOID WriteNoOp(THREADID thr, ADDRINT ip)
 {
-    if(enable_output) {
-        if(thr < core_count) {
-            ArielCommand ac;
-            ac.command = ARIEL_NOOP;
-            ac.instPtr = (uint64_t) ip;
-            tunnel->writeMessage(thr, ac);
-        }
-    }
+    //if(enable_output) {
+    //    if(thr < core_count) {
+    //        ArielCommand ac;
+    //        ac.command = ARIEL_NOOP;
+    //        ac.instPtr = (uint64_t) ip;
+    //        tunnel->writeMessage(thr, ac);
+    //    }
+    //}
 }
 
 VOID WriteInstructionWriteOnly(THREADID thr, ADDRINT* writeAddr, UINT32 writeSize, ADDRINT ip,
@@ -506,6 +512,14 @@ VOID InstrumentInstruction(INS ins, VOID *v)
     UINT32 simdOpWidth     = 1;
     UINT32 instClass       = ARIEL_INST_UNKNOWN;
     UINT32 maxSIMDRegWidth = 1;
+
+    RTN checkRtn = INS_Rtn(ins);
+
+    if(!RTN_Valid(checkRtn))
+        return;
+    IMG img = SEC_Img(RTN_Sec(checkRtn));
+    if (!IMG_IsMainExecutable(img))
+        return;
 
     std::string instCode = INS_Mnemonic(ins);
 
