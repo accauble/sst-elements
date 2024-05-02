@@ -102,6 +102,9 @@ libariel_la_SOURCES += frontend/pin3/pin3frontend.h \
 endif
 endif
 
+libariel_la_SOURCES += frontend/epa/epafrontend.h \
+		       frontend/epa/epafrontend.cc
+
 if USE_CUDA
 AM_CPPFLAGS += $(CUDA_CPPFLAGS)
 endif
