@@ -120,6 +120,10 @@ libariel_la_SOURCES += frontend/pin3/pin3frontend.h \
 endif
 endif
 
+libariel_la_SOURCES += frontend/epa/epafrontend.h \
+		       frontend/epa/epafrontend.cc
+
+
 libariel_la_CPPFLAGS = \
 	-DARIEL_TRACE_LIB=$(libdir)/sst \
 	-DARIEL_TOOL_DIR="$(libexecdir)" \
