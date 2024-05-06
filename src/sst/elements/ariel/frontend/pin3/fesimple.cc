@@ -408,14 +408,13 @@ VOID WriteInstructionWrite(ADDRINT* address, UINT32 writeSize, THREADID thr, ADD
     tunnel->writeMessage(thr, ac);
 }
 
-VOID WriteStartInstructionMarker(UINT32 thr, ADDRINT ip, UINT32 instClass,
-  UINT32 simdOpWidth)
+VOID WriteStartInstructionMarker(UINT32 thr, ADDRINT ip, UINT32 instClass, UINT32 simdOpWidth)
 {
     ArielCommand ac;
     ac.command = ARIEL_START_INSTRUCTION;
     ac.instPtr = (uint64_t) ip;
-    ac.inst.instClass = instClass;
     ac.inst.simdElemCount = simdOpWidth;
+    ac.inst.instClass = instClass;
     tunnel->writeMessage(thr, ac);
 }
 
@@ -426,7 +425,7 @@ VOID WriteEndInstructionMarker(UINT32 thr, ADDRINT ip)
     ac.instPtr = (uint64_t) ip;
     tunnel->writeMessage(thr, ac);
 }
-
+t 
 VOID WriteInstructionReadWrite(THREADID thr, ADDRINT* readAddr, UINT32 readSize,
             ADDRINT* writeAddr, UINT32 writeSize, ADDRINT ip, UINT32 instClass,
             UINT32 simdOpWidth )
