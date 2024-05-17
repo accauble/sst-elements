@@ -7,6 +7,9 @@
 #include <string>
 #include <array>
 #include <algorithm>
+#include <cstring>
+#include <cassert>
+#include <cerrno>
 
 /*
  *  SLURM-specific MPI launcher for Ariel simulations
@@ -110,8 +113,52 @@ int main(int argc, char *argv[]) {
         mpicmd += binary;
     }
 
-    printf("Wrapper starting...\n");
-    printf("Arg to system: %s\n", mpicmd.c_str());
-    system(mpicmd.c_str());
-    printf("Wrapper complete...\n");
+    int use_system = 0;
+    if (use_system) {
+        printf("Wrapper starting...\n");
+        printf("Arg to system: %s\n", mpicmd.c_str());
+        system(mpicmd.c_str());
+        printf("Wrapper complete...\n");
+    } else {
+        // Use execve to make sure that the child processes exits when killed by SST
+        // I am lazily assuming that there are no spaces in any of the arguments.
+
+        // Get a mutable copy
+        char * cmd_copy = new char[mpicmd.length() + 1];
+        std::strcpy(cmd_copy, mpicmd.c_str());
+
+        // Calculate an upper bound for the number of arguments
+        const int MAX_ARGS = std::strlen(cmd_copy) / 2 + 2;
+
+        // Allocate memory for the pointers
+        char** argv = new char*[MAX_ARGS];
+        for (int i = 0;i < MAX_ARGS; i++) {
+            argv[i] = NULL;
+        }
+
+        // Temporary variable to hold each word
+        char* word;
+
+        // Counter for the number of words
+        int argc = 0;
+
+        // Use strtok to split the string by spaces
+        word = std::strtok(cmd_copy, " ");
+        while (word != nullptr) {
+            // Allocate memory for the word and copy it
+            argv[argc] = new char[std::strlen(word) + 1];
+            std::strcpy(argv[argc], word);
+
+            // Move to the next word
+            word = std::strtok(nullptr, " ");
+            argc++;
+        }
+
+        assert(argv[argc] == NULL);
+
+        printf("MPI Command: %s\n", mpicmd.c_str());
+        int ret = execvp(argv[0], argv);
+        printf("Error: mpilauncher-onenode.cc: This should be unreachable. execvp error: %d, %s\n", errno, strerror(errno));
+        exit(1);
+    }
 }
