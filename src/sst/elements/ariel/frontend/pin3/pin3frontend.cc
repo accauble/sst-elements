@@ -366,7 +366,7 @@ void Pin3Frontend::finish() {
     // may still be executing. It will become a zombie if we do not
     // kill it.
     if (child_pid != 0) {
-        kill(child_pid, SIGKILL);
+        kill(child_pid, SIGTERM);
     }
 }
 

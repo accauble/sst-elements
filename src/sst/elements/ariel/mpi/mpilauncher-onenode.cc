@@ -10,6 +10,8 @@
 #include <cstring>
 #include <cassert>
 #include <cerrno>
+#include <csignal>
+#include <sys/wait.h>
 
 /*
  *  SLURM-specific MPI launcher for Ariel simulations
@@ -20,12 +22,26 @@
  *  will run on the node with SST, and the remaining
  *  ranks will be distributed on the other nodes.
  */
+
+int pid = 0; // global so we can use it in the signal handler
+
+// Catch SIGTERM so we can try and shut down the child process
+void signalHandler(int signum) {
+    std::cout << "Caught signal " << signum << ", exiting gracefully." << std::endl;
+    if (pid != 0) {
+        kill(pid, signum);
+    }
+    exit(0);
+}
+
 int main(int argc, char *argv[]) {
 
     if (argc < 4 || std::string(argv[1]).compare("-H") == 0) {
         std::cout << "Usage: " << argv[0] << " <nprocs> <tracerank> <pin-binary> [pin args] -- <program-binary> [program args]\n";
         exit(1);
     }
+
+    signal(SIGTERM, signalHandler);
 
     std::array<char, 128> buffer;
 
@@ -157,8 +173,26 @@ int main(int argc, char *argv[]) {
         assert(argv[argc] == NULL);
 
         printf("MPI Command: %s\n", mpicmd.c_str());
-        int ret = execvp(argv[0], argv);
-        printf("Error: mpilauncher-onenode.cc: This should be unreachable. execvp error: %d, %s\n", errno, strerror(errno));
-        exit(1);
+
+        // Forking child process so we can use the parent to kill it if we need to
+        pid = fork();
+        if (pid == -1) {
+            printf("mpilauncher-onenode.cc: fork error: %d, %s\n", errno, strerror(errno));
+            exit(-1);
+        } else if (pid > 1) { // Parent
+            int status;
+            waitpid(pid, &status, 0);
+            if (!WIFEXITED(status)) {
+                printf("Warning: mpilauncher-onenode.cc: Forked process did not exit normally.\n");
+            } if (WEXITSTATUS(status) != 0) {
+                printf("Warning: mpilauncher-onenode.cc: Forked process has non-zero exit code: %d\n", WEXITSTATUS(status));
+            }
+            exit(0);
+        } else { // Child
+            int ret = execvp(argv[0], argv);
+            printf("Error: mpilauncher-onenode.cc: This should be unreachable. execvp error: %d, %s\n", errno, strerror(errno));
+            exit(1);
+        }
+
     }
 }
