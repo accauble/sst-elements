@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#if ENABLE_ARIEL_MPI
+#ifdef ENABLE_ARIEL_MPI
 #include <mpi.h>
 #endif
 
