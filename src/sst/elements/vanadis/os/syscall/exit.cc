@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -32,7 +32,7 @@ VanadisExitSyscall::VanadisExitSyscall( VanadisNodeOSComponent* os, SST::Link* c
         printf("node=%d pid=%d tid=%d has exited\n", m_os->getNodeNum(), process->getpid(), process->gettid());
     } else {
         if ( event->getExitCode() > 0 ) {
-            printf("pid=%d tid=%d has exited with code %d, Failed\n", process->getpid(), process->gettid(),event->getExitCode());
+            printf("pid=%d tid=%d has exited with code %llu, Failed\n", process->getpid(), process->gettid(),event->getExitCode());
         } else {
             printf("pid=%d tid=%d has exited\n", process->getpid(), process->gettid());
         }

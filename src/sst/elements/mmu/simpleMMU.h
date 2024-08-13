@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -145,7 +145,7 @@ class SimpleMMU : public MMU {
         void checkpoint( FILE* fp ) {
             fprintf(fp,"pteMap.size() %zu\n",pteMap.size());
             for ( auto & x : pteMap ) {
-                fprintf(fp,"vpn: %d, ppn: %d, perms: %#lx \n", x.first,x.second.ppn,x.second.perms );
+                fprintf(fp,"vpn: %d, ppn: %d, perms: %d \n", x.first,x.second.ppn,x.second.perms );
             }
         }
       private:

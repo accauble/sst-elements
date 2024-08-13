@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -22,7 +22,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <assert.h>
+#include <sstream>
 
+#include "output.h"
 #include "vanadisDbgFlags.h"
 
 #define FOUR_KB 4096
@@ -69,7 +71,7 @@ class PhysMemManager {
         }
 
         void checkpoint( FILE* fp ) {
-            fprintf(fp,"BitMap size: %d\n",m_bitMap.size());
+            fprintf(fp,"BitMap size: %zu\n",m_bitMap.size());
             for ( auto i = 0; i < m_bitMap.size(); i++ ) {
                 if ( m_bitMap[i] ) {
                     fprintf(fp,"%d %#018" PRIx64 "\n",i,m_bitMap[i]);
@@ -143,7 +145,7 @@ class PhysMemManager {
 
         output->verbose(CALL_INFO, 0, VANADIS_DBG_CHECKPOINT,"PhysMemManager %s\n", filename.str().c_str());
 
-        fprintf(fp,"m_numAllocated %d\n",m_numAllocated);
+        fprintf(fp,"m_numAllocated %llu\n",m_numAllocated);
         m_bitMap.checkpoint(fp);
     }
     void checkpointLoad( SST::Output* output , std::string dir ) {
@@ -152,8 +154,8 @@ class PhysMemManager {
         auto fp = fopen(filename.str().c_str(),"r");
         assert(fp);
 
-        assert( 1 == fscanf(fp,"m_numAllocated %d\n",&m_numAllocated) );
-        output->verbose(CALL_INFO, 0, VANADIS_DBG_CHECKPOINT,"m_numAllocated %d\n",m_numAllocated);
+        assert( 1 == fscanf(fp,"m_numAllocated %llu\n",&m_numAllocated) );
+        output->verbose(CALL_INFO, 0, VANADIS_DBG_CHECKPOINT,"m_numAllocated %llu\n",m_numAllocated);
         m_bitMap.checkpointLoad(output,fp);
     }
 

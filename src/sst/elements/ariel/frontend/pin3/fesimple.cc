@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -459,8 +459,6 @@ VOID WriteInstructionReadOnly(THREADID thr, ADDRINT* readAddr, UINT32 readSize, 
             WriteInstructionRead(  readAddr,  readSize,  thr, ip, instClass, simdOpWidth );
             if (last)
                 WriteEndInstructionMarker(thr, ip);
-        } else if (thr > core_count + 1){
-            printf(" PAT -> NO OUTPUT because thr >= core_count (%d >= %d)\n", thr, core_count);
         }
     }
 
@@ -1934,8 +1932,6 @@ VOID InstrumentRoutine(RTN rtn, VOID* args)
             RTN_Replace(rtn, (AFUNPTR) mapped_ariel_malloc_flag_fortran);
             return;
         }
-    } else {
-        //printf("PATRICK -- not replacing: %s\n", RTN_Name(rtn).c_str());
     }
 }
 

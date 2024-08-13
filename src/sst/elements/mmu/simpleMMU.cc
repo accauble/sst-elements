@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -179,7 +179,7 @@ void SimpleMMU::checkpoint( std::string dir ) {
     fprintf(fp,"m_coreToPid.size() %zu\n", m_coreToPid.size());
     for ( auto core = 0; core < m_coreToPid.size(); core++ ) {
         auto& x = m_coreToPid[core];
-        fprintf(fp,"core: %d, numPids: %d\n",core,x.size());
+        fprintf(fp,"core: %d, numPids: %zu\n",core,x.size());
         for ( auto j = 0; j < x.size(); j++ ) {
             fprintf(fp,"%d ",x[j]);
         }

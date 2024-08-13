@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -366,7 +366,7 @@ void Pin3Frontend::finish() {
     // may still be executing. It will become a zombie if we do not
     // kill it.
     if (child_pid != 0) {
-        kill(child_pid, SIGKILL);
+        kill(child_pid, SIGTERM);
     }
 }
 

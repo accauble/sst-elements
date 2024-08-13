@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -244,7 +244,7 @@ class ProcessInfo {
         fprintf(fp,"m_gid: %d\n",m_gid);
         fprintf(fp,"m_core: %d\n",m_core);
         fprintf(fp,"m_hwThread: %d\n",m_hwThread);
-        fprintf(fp,"m_tidAddress: %#lx\n",m_tidAddress);
+        fprintf(fp,"m_tidAddress: %#llx\n",m_tidAddress);
 
         m_virtMemMap->checkpoint(fp);
         m_fileTable->checkpoint(fp);

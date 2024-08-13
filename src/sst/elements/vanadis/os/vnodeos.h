@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -273,7 +273,7 @@ private:
         VanadisSyscall* getSyscall( unsigned hwThread ) { return m_hwThreadMap.at(hwThread).getSyscall(); }
 
         void checkpoint( FILE* fp ) {
-            fprintf(fp, "m_hwThreadMap.size(): %d\n",m_hwThreadMap.size());
+            fprintf(fp, "m_hwThreadMap.size(): %zu\n",m_hwThreadMap.size());
             for ( auto i = 0; i < m_hwThreadMap.size(); i++ ) {
                 fprintf(fp, "hwThread: %d\n",i);
                 m_hwThreadMap[i].checkpoint( fp );

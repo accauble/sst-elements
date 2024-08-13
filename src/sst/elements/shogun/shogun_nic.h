@@ -1,8 +1,8 @@
-// Copyright 2009-2023 NTESS. Under the terms
+// Copyright 2009-2024 NTESS. Under the terms
 // of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2023, NTESS
+// Copyright (c) 2009-2024, NTESS
 // All rights reserved.
 //
 // Portions are copyright of other developers:
@@ -57,16 +57,12 @@ namespace Shogun {
      		* Sends a network request during the init() phase
      	*/
         void sendUntimedData(Request* req) override;
-        // Remove sendInitData() for SST 14
-        void sendInitData(Request* req) override;
 
         /**
      		* Receive any data during the init() phase.
      		* @see SST::Link::recvInitData()
      	*/
         Request* recvUntimedData() override;
-        // Remove recvInitData() for SST 14
-        Request* recvInitData() override;
 
 
         /**
