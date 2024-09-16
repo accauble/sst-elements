@@ -9,7 +9,7 @@ endif
 all-local: libarielapi.so libarielapi.a
 
 libarielapi.so: arielapi.c arielapi.h
-	$(CC_LOCAL) $(CFLAGS_LOCAL) -fPIC -shared -o libarielapi.so arielapi.c
+	$(CC_LOCAL) $(CFLAGS_LOCAL) -fPIC -shared -o libarielapi.so $(LDFLAGS) arielapi.c
 
 arielapi.o: arielapi.c arielapi.h
 	$(CC_LOCAL) $(CFLAGS_LOCAL) -c -o arielapi.o arielapi.c
