@@ -186,16 +186,20 @@ class testcase_Ariel(SSTTestCase):
         # Now build the Ariel stream example
         cmd = "make"
         rtn1 = OSCommand(cmd, set_cwd=self.ArielElementStreamDir).run()
-        log_debug("Ariel frontend/simple/examples/Makefile Make result = {0}; output =\n{1}".format(rtn1.result(), rtn1.output()))
+        log_debug("Ariel stream Make result = {0}; output =\n{1}".format(rtn1.result(), rtn1.output()))
+        if rtn1.result() != 0:
+            log_debug("Ariel {0} Make returned non-zero exit code. Error:\n{1}".format(self.ArielElementStreamDir, rtn1.error()))
+
 
         # Now build the ompmybarrier binary
         cmd = "make"
         rtn2 = OSCommand(cmd, set_cwd=self.ArielElementompmybarrierDir).run()
         log_debug("Ariel ompmybarrier Make result = {0}; output =\n{1}".format(rtn2.result(), rtn2.output()))
-        
+        if rtn2.result() != 0:
+            log_debug("Ariel {0} Make returned non-zero exit code. Error:\n{1}".format(self.ArielElementompmybarrierDir, rtn2.error()))
+
         # Check that everything compiled OK
         #self.assertTrue(rtn0.result() == 0, "libarielapi failed to compile")
         self.assertTrue(rtn1.result() == 0, "stream apps failed to compile")
         self.assertTrue(rtn2.result() == 0, "ompmybarrier.c failed to compile")
-    
 
