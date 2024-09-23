@@ -19,6 +19,9 @@ AC_DEFUN([SST_ariel_CONFIG], [
   AC_SUBST([ARIEL_MPI_CFLAGS])
   AC_SUBST([ARIEL_MPI_LIBS])
 
+  AC_CONFIG_LINKS([src/sst/elements/ariel/api/arielapi.c:src/sst/elements/ariel/api/arielapi.c])
+  AC_CONFIG_LINKS([src/sst/elements/ariel/api/arielapi.h:src/sst/elements/ariel/api/arielapi.h])
+
   AC_CONFIG_FILES([src/sst/elements/ariel/api/Makefile])
   AC_CONFIG_FILES([src/sst/elements/ariel/mpi/Makefile])
 
