@@ -10,5 +10,3 @@ stream:
 
 stream_mlm:
 	g++ stream_malloc.c -o stream_mlm $(CFLAGS_LOCAL) -I$(API_DIR) -L$(API_DIR) -larielapi
-
-AM_DEFAULT_VERBOSITY=1

@@ -176,12 +176,19 @@ class testcase_Ariel(SSTTestCase):
         self.ArielElementStreamDir = "{0}/frontend/simple/examples/stream".format(self.ArielElementDir)
         self.ArielElementompmybarrierDir = "{0}/testopenMP/ompmybarrier".format(test_path)
 
-        # Build the Ariel API library
-        #ArielApiDir = "{0}/api".format(self.ArielElementDir)
-        #cmd = "make"
-        #rtn0 = OSCommand(cmd, set_cwd=ArielApiDir).run()
-        #log_debug("Ariel api/libarielapi.so Make result = {0}; output =\n{1}".format(rtn0.result(), rtn0.output()))
-        #os.environ["ARIELAPI"] =  ArielApiDir
+        # Add the API directory to LD_LIBRARY_PATH
+        # It is set in the Makefile but we set it here as well
+        # to support out-of-source builds
+        ArielApiDir = "{0}/api".format(self.ArielElementDir)
+	current_ld_library_path = os.environ.get("LD_LIBRARY_PATH", "")
+
+	if current_ld_library_path:
+            new_ld_library_path = f"{current_ld_library_path}:{ArielApiDir}"
+	else:
+            new_ld_library_path = ArielApiDir
+
+	os.environ["LD_LIBRARY_PATH"] = new_ld_library_path
+
 
         # Now build the Ariel stream example
         cmd = "make"
