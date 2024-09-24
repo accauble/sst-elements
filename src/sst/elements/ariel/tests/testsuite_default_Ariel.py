@@ -200,6 +200,6 @@ class testcase_Ariel(SSTTestCase):
 
         # Check that everything compiled OK
         #self.assertTrue(rtn0.result() == 0, "libarielapi failed to compile")
-        self.assertTrue(rtn1.result() == 0, "stream apps failed to compile")
+        self.assertTrue(rtn1.result() == 0, "stream apps failed to compile.\nResult was {0}.\nStandard out was:\n{1}\nStandard err was:\n{2}", rtn1.result(), rtn1.output(), rtn1.error())
         self.assertTrue(rtn2.result() == 0, "ompmybarrier.c failed to compile")
 
