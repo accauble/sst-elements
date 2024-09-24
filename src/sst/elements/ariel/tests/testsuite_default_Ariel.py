@@ -180,15 +180,14 @@ class testcase_Ariel(SSTTestCase):
         # It is set in the Makefile but we set it here as well
         # to support out-of-source builds
         ArielApiDir = "{0}/api".format(self.ArielElementDir)
-	current_ld_library_path = os.environ.get("LD_LIBRARY_PATH", "")
+        current_ld_library_path = os.environ.get("LD_LIBRARY_PATH", "")
 
-	if current_ld_library_path:
+        if current_ld_library_path != "":
             new_ld_library_path = f"{current_ld_library_path}:{ArielApiDir}"
-	else:
+        else:
             new_ld_library_path = ArielApiDir
 
-	os.environ["LD_LIBRARY_PATH"] = new_ld_library_path
-
+        os.environ["LD_LIBRARY_PATH"] = new_ld_library_path
 
         # Now build the Ariel stream example
         cmd = "make"
