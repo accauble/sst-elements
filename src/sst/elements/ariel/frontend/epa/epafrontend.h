@@ -63,6 +63,10 @@ class EPAFrontend : public ArielFrontend {
 //        {"envparamcount", "Number of environment parameters to supply to the Ariel executable, default=-1 (use SST environment)", "-1"},
 //        {"envparamname%(envparamcount)d", "Sets the environment parameter name", ""},
 //        {"envparamval%(envparamcount)d", "Sets the environment parameter value", ""},
+        {"mpimode", "Whether to use <mpilauncher> to to launch <launcher> in order to trace MPI-enabled applications.", "0"},
+        {"mpilauncher", "Specify a launcher to be used for MPI executables in conjuction with <launcher>", STRINGIZE(EPA_MPILAUNCHER_EXECUTABLE)},
+        {"mpiranks", "Number of ranks to be launched by <mpilauncher>. Only <mpitracerank> will be traced by <launcher>.", "1" },
+        {"mpitracerank", "Rank to be traced by <launcher>.", "0" },
         {"appargcount", "Number of arguments to the traced executable", "0"},
         {"apparg%(appargcount)d", "Arguments for the traced executable", ""})//,
 //        {"arielmode", "Tool interception mode, set to 1 to trace entire program (default), set to 0 to delay tracing until ariel_enable() call., set to 2 to attempt auto-detect", "2"},
@@ -109,6 +113,11 @@ class EPAFrontend : public ArielFrontend {
 
         std::string executable;
         epa_redirect_info_t epa_redirect_info;
+
+        int mpimode;
+        std::string mpilauncher;
+        int mpiranks;
+        int mpitracerank;
 
 
         char **execute_args;
