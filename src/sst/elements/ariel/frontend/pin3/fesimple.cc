@@ -367,6 +367,7 @@ VOID WriteInstructionRead(ADDRINT* address, UINT32 readSize, THREADID thr, ADDRI
 {
 
     const uint64_t addr64 = (uint64_t) address;
+    static std::set<uint64_t> reportedMemSeqs;
 
     ArielCommand ac;
 
@@ -379,6 +380,10 @@ VOID WriteInstructionRead(ADDRINT* address, UINT32 readSize, THREADID thr, ADDRI
 
     //fprintf(stderr, "ACC: ARIEL_PERFORM_READ: %#lx, %#lx\n", ac.instPtr,
     //  ac.inst.addr);
+    if (reportedMemSeqs.count(ac.instPtr) == 0) {
+        fprintf(stderr, "ACC_ARIEL: instPtr=%#lx instClass=%d simdElemCount=%d command=%d size=%d\n", ac.instPtr, ac.inst.instClass, ac.inst.simdElemCount, ac.command, ac.inst.size);
+        reportedMemSeqs.insert(ac.instPtr);
+    }
 
     tunnel->writeMessage(thr, ac);
 }
@@ -388,6 +393,7 @@ VOID WriteInstructionWrite(ADDRINT* address, UINT32 writeSize, THREADID thr, ADD
 {
 
     const uint64_t addr64 = (uint64_t) address;
+    static std::set<uint64_t> reportedMemSeqs;
     ArielCommand ac;
 
     ac.command = ARIEL_PERFORM_WRITE;
@@ -412,6 +418,11 @@ VOID WriteInstructionWrite(ADDRINT* address, UINT32 writeSize, THREADID thr, ADD
     }
     printf("\n");
 */
+
+    if (reportedMemSeqs.count(ac.instPtr) == 0) {
+        fprintf(stderr, "ACC_ARIEL: instPtr=%#lx instClass=%d simdElemCount=%d command=%d size=%d\n", ac.instPtr, ac.inst.instClass, ac.inst.simdElemCount, ac.command, ac.inst.size);
+        reportedMemSeqs.insert(ac.instPtr);
+    }
 
     //fprintf(stderr, "ACC: ARIEL_PERFORM_WRITE: %#x, %#lx, %#lx, %d\n",
     //  thr, ac.instPtr, ac.inst.addr, ac.inst.size);
@@ -577,16 +588,26 @@ VOID InstrumentInstruction(INS ins, VOID *v)
     }
    
     UINT32 operands = INS_MemoryOperandCount(ins);
+    if (INS_HasScatteredMemoryAccess(ins))
+        operands = 0;
+    if (INS_IsRet(ins))
+        operands = 0;
+    if (INS_IsCall(ins))
+        operands = 0;
+    //if (INS_Address(ins) < 0x402240)
+    //    operands = 0;
     for (UINT32 op = 0; op < operands; op++) {
         BOOL first = (op == 0);
         BOOL last = (op == (operands - 1));
-        
+ 
         if (INS_MemoryOperandIsRead(ins, op) && INS_MemoryOperandIsWritten(ins, op)) {
+            USIZE opSize = INS_MemoryOperandSize(ins, op);
+
             INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)
                     WriteInstructionReadWrite,
                     IARG_THREAD_ID,
-                    IARG_MEMORYREAD_EA, IARG_UINT32, INS_MemoryOperandSize(ins, op),
-                    IARG_MEMORYWRITE_EA, IARG_UINT32, INS_MemoryOperandSize(ins, op),
+                    IARG_MEMORYREAD_EA, IARG_UINT32, opSize,
+                    IARG_MEMORYWRITE_EA, IARG_UINT32, opSize,
                     IARG_INST_PTR,
                     IARG_UINT32, instClass,
                     IARG_UINT32, simdOpWidth,
@@ -594,10 +615,11 @@ VOID InstrumentInstruction(INS ins, VOID *v)
                     IARG_BOOL, last,
                     IARG_END);
         } else if (INS_MemoryOperandIsRead(ins, op)) {
+            USIZE opSize = INS_MemoryOperandSize(ins, op);
             INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)
                     WriteInstructionReadOnly,
                     IARG_THREAD_ID,
-                    IARG_MEMORYREAD_EA, IARG_UINT32, INS_MemoryOperandSize(ins, op),
+                    IARG_MEMORYREAD_EA, IARG_UINT32, opSize,
                     IARG_INST_PTR,
                     IARG_UINT32, instClass,
                     IARG_UINT32, simdOpWidth,
@@ -605,10 +627,11 @@ VOID InstrumentInstruction(INS ins, VOID *v)
                     IARG_BOOL, last,
                     IARG_END);
         } else {
+            USIZE opSize = INS_MemoryOperandSize(ins, op);
             INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)
                     WriteInstructionWriteOnly,
                     IARG_THREAD_ID,
-                    IARG_MEMORYWRITE_EA, IARG_UINT32, INS_MemoryOperandSize(ins, op),
+                    IARG_MEMORYWRITE_EA, IARG_UINT32, opSize,
                     IARG_INST_PTR,
                     IARG_UINT32, instClass,
                     IARG_UINT32, simdOpWidth,

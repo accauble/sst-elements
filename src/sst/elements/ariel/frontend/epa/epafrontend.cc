@@ -267,6 +267,19 @@ int EPAFrontend::forkChild(const char* app, char** args, std::map<std::string, s
 
     // If this is the child
     } else {
+        std::string shmem_region_name = tunnelmgr->getRegionName();
+        std::string mpimode_str = std::to_string(mpimode);
+        std::string mpitracerank_str = std::to_string(mpitracerank);
+        // Tell the EPA Runtime library to not use its default tool
+        setenv("METASIM_CACHE_SIMULATION", "0", 1);
+        // Tell the EPA Runtime library to use the Ariel Tool
+        setenv("METASIM_ARIEL_FRONTEND", "1", 1);
+        // Pass the shared memory location to EPA library
+        setenv("METASIM_SST_SHMEM", shmem_region_name.c_str(), 1);
+        // Tell the EPA Runtime library if we're using MPI
+        setenv("METASIM_SST_USE_MPI", mpimode_str.c_str(), 1);
+        // Pass the rank the user wants to trace to the EPA library
+        setenv("METASIM_SST_TRACE_RANK", mpitracerank_str.c_str(), 1);
         //Do I/O redirection before exec
         if ("" != epa_redirect_info.stdin_file) {
             output->verbose(CALL_INFO, 1, 0, "Redirecting child stdin from file %s\n", epa_redirect_info.stdin_file.c_str());
@@ -304,19 +317,6 @@ int EPAFrontend::forkChild(const char* app, char** args, std::map<std::string, s
 #endif // End of HAVE_SET_PTRACER
 #endif // End SST_COMPILE_MACOSX (else branch)
 
-        std::string shmem_region_name = tunnelmgr->getRegionName();
-        std::string mpimode_str = std::to_string(mpimode);
-        std::string mpitracerank_str = std::to_string(mpitracerank);
-        // Tell the EPA Runtime library to not use its default tool
-        setenv("METASIM_CACHE_SIMULATION", "0", 1);
-        // Tell the EPA Runtime library to use the Ariel Tool
-        setenv("METASIM_ARIEL_FRONTEND", "1", 1);
-        // Pass the shared memory location to EPA library
-        setenv("METASIM_SST_SHMEM", shmem_region_name.c_str(), 1);
-        // Tell the EPA Runtime library if we're using MPI
-        setenv("METASIM_SST_USE_MPI", mpimode_str.c_str(), 1);
-        // Pass the rank the user wants to trace to the EPA library
-        setenv("METASIM_SST_TRACE_RANK", mpitracerank_str.c_str(), 1);
         int ret_code = execvp(app, args);
         perror("execve");
 
