@@ -64,7 +64,7 @@ class EPAFrontend : public ArielFrontend {
 //        {"envparamname%(envparamcount)d", "Sets the environment parameter name", ""},
 //        {"envparamval%(envparamcount)d", "Sets the environment parameter value", ""},
         {"mpimode", "Whether to use <mpilauncher> to to launch <launcher> in order to trace MPI-enabled applications.", "0"},
-        {"mpilauncher", "Specify a launcher to be used for MPI executables in conjuction with <launcher>", STRINGIZE(EPA_MPILAUNCHER_EXECUTABLE)},
+        {"mpilauncher", "Specify a launcher to be used for MPI executables in conjuction with <launcher>", STRINGIZE(MPILAUNCHER_EXECUTABLE)},
         {"mpiranks", "Number of ranks to be launched by <mpilauncher>. Only <mpitracerank> will be traced by <launcher>.", "1" },
         {"mpitracerank", "Rank to be traced by <launcher>.", "0" },
         {"appargcount", "Number of arguments to the traced executable", "0"},
@@ -85,10 +85,6 @@ class EPAFrontend : public ArielFrontend {
         virtual void finish();
         virtual ArielTunnel* getTunnel();
 
-//#ifdef HAVE_CUDA
-//        virtual GpuReturnTunnel* getReturnTunnel();
-//        virtual GpuDataTunnel* getDataTunnel();
-//#endif
 
     private:
 
@@ -103,13 +99,6 @@ class EPAFrontend : public ArielFrontend {
 
         ArielTunnel* tunnel;
 
-//#ifdef HAVE_CUDA
-//        SST::Core::Interprocess::MMAPParent<GpuReturnTunnel>* tunnelRmgr;
-//        SST::Core::Interprocess::MMAPParent<GpuDataTunnel>* tunnelDmgr;
-//
-//        GpuReturnTunnel* tunnelR;
-//        GpuDataTunnel* tunnelD;
-//#endif
 
         std::string executable;
         epa_redirect_info_t epa_redirect_info;

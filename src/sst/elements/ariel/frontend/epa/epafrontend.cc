@@ -68,7 +68,7 @@ EPAFrontend::EPAFrontend(ComponentId_t id, Params& params, uint32_t cores, uint3
     mpimode = params.find<int>("mpimode", 0);
     if (mpimode) {
         mpilauncher = params.find<std::string>("mpilauncher",
-          ARIEL_STRINGIZE(EPA_MPILAUNCHER_EXECUTABLE));
+          ARIEL_STRINGIZE(MPILAUNCHER_EXECUTABLE));
         mpiranks = params.find<int>("mpiranks", 1);
         mpitracerank = params.find<int>("mpitracerank", 0);
     }
@@ -104,7 +104,7 @@ EPAFrontend::EPAFrontend(ComponentId_t id, Params& params, uint32_t cores, uint3
     }
 
     // Put together execution command
-    execute_args = (char**) malloc(sizeof(char*) * (mpi_args + app_argc + 2));
+    execute_args = (char**) malloc(sizeof(char*) * (mpi_args + app_argc + 3));
     uint32_t arg = 0; // Track current arg
 
     if (mpimode == 1) {
@@ -127,6 +127,8 @@ EPAFrontend::EPAFrontend(ComponentId_t id, Params& params, uint32_t cores, uint3
         execute_args[arg] = (char*) malloc(mpitracerank_str_size);
         snprintf(execute_args[arg], mpitracerank_str_size, "%s", mpitracerank_str.c_str());
         arg++;
+
+        execute_args[arg++] = const_cast<char*>("--");
     }
 
     output->verbose(CALL_INFO, 1, 0, "Processing application arguments...\n");

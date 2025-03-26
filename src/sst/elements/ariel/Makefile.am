@@ -129,7 +129,6 @@ libariel_la_CPPFLAGS = \
 	-DARIEL_TOOL_DIR="$(libexecdir)" \
 	-DPINTOOL_EXECUTABLE="$(PINTOOL_RUNTIME)" \
 	-DMPILAUNCHER_EXECUTABLE="$(CURDIR)/mpi/mpilauncher" \
-	-DEPA_MPILAUNCHER_EXECUTABLE="$(CURDIR)/mpi/epa-mpilauncher" \
 	$(AM_CPPFLAGS) \
 	$(CPPFLAGS)
 
