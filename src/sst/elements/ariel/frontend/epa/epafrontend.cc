@@ -25,170 +25,46 @@
 
 using namespace SST::ArielComponent;
 
-EPAFrontend::EPAFrontend(ComponentId_t id, Params& params, uint32_t cores, uint32_t maxCoreQueueLen, uint32_t defMemPool) : ArielFrontend(id, params, cores, maxCoreQueueLen, defMemPool) {
+EPAFrontend::EPAFrontend(ComponentId_t id, Params& params, uint32_t cores,
+    uint32_t maxCoreQueueLen, uint32_t defMemPool) :
+    ArielFrontendCommon(id, params, cores, maxCoreQueueLen, defMemPool) {
 
-    // Parse arguments
-    int verbosity = params.find<int>("verbose", 0);
-    output = new SST::Output("EPAFrontend[@f:@l:@p] ", verbosity, 0, SST::Output::STDERR);
+    // Create output
+    verbosemode = params.find<int>("verbose", 0);
+    output = new SST::Output("EPAFrontend[@f:@l:@p] ", verbosemode, 0, SST::Output::STDERR);
 
-    core_count = cores;
+    // Parse parameters that all frontends have
+    parseCommonSubComponentParams(params);
 
-    //////////////////////////////////////////////////////////////////////////
-    
-
-    // Parse executable name
-    executable = params.find<std::string>("executable", "");
-    if ("" == executable) {
-        output->fatal(CALL_INFO, -1, "The input deck did not specify an executable to be run\n");
-    }
     // Add ".arielinst" to the executable name (this is the instrumented
     // app name)
     executable.append(".arielinst");
 
-    // Parse redirect info
-    epa_redirect_info.stdin_file = params.find<std::string>("appstdin", "");
-    epa_redirect_info.stdout_file = params.find<std::string>("appstdout", "");
-    epa_redirect_info.stderr_file = params.find<std::string>("appstderr", "");
-    epa_redirect_info.stdoutappend = params.find<std::uint32_t>("appstdoutappend", "0");
-    epa_redirect_info.stderrappend = params.find<std::uint32_t>("appstderrappend", "0");
+    output->verbose(CALL_INFO, 1, 0, "Completed processing application arguments.\n");
 
-    // Parse application arguments
-    uint32_t app_argc = (uint32_t) params.find<uint32_t>("appargcount", 0);
-    output->verbose(CALL_INFO, 1, 0, "Model specifies that there are %" PRIu32 " application arguments\n", app_argc);
-
-
-    // Create shared memory region
-    tunnelmgr = new SST::Core::Interprocess::SHMParent<ArielTunnel>(id, core_count, maxCoreQueueLen);
-
+    // Create Tunnel Manager and set the tunnel
+    tunnelmgr = new SST::Core::Interprocess::SHMParent<ArielTunnel>(id,
+        core_count, maxCoreQueueLen);
     std::string shmem_region_name = tunnelmgr->getRegionName();
     tunnel = tunnelmgr->getTunnel();
     output->verbose(CALL_INFO, 1, 0, "Base pipe name: %s\n", shmem_region_name.c_str());
 
-    // MPI launcher options
-    mpimode = params.find<int>("mpimode", 0);
-    if (mpimode) {
-        mpilauncher = params.find<std::string>("mpilauncher",
-          ARIEL_STRINGIZE(MPILAUNCHER_EXECUTABLE));
-        mpiranks = params.find<int>("mpiranks", 1);
-        mpitracerank = params.find<int>("mpitracerank", 0);
-    }
+    // Put together execute_args for fork
+    setForkArguments();
+    // If mpi, use mpi launcher. Otherwise launch instrumented app
+    app_name = (mpimode == 1) ? mpilauncher : executable;
 
-    // MPI launcher error checking
-    if (mpimode == 1) {
-        if (mpilauncher.compare("") == 0) {
-            output->fatal(CALL_INFO, -1, "mpimode=1 was specified but parameter `mpilauncher` is an empty string");
-        }
-        if (epa_redirect_info.stdin_file.compare("") != 0 || epa_redirect_info.stdout_file.compare("") != 0 || epa_redirect_info.stderr_file.compare("") != 0) {
-            output->fatal(CALL_INFO, -1, "Using an MPI launcher and redirected I/O is not supported.\n");
-        }
+//    output->verbose(CALL_INFO, 1, 0, "Processing application arguments...\n");
 
-        if (mpiranks < 1) {
-            output->fatal(CALL_INFO, -1, "You must specify a positive number for `mpiranks` when using an MPI launhcer. Got %d.\n", mpiranks);
-        }
-        if (mpitracerank < 0 || mpitracerank >= mpiranks) {
-            output->fatal(CALL_INFO, -1, "The value of `mpitracerank` must be in [0,mpiranks) Got %d.\n", mpitracerank);
-        }
-    }
-
-    if (mpimode == 1) {
-        output->verbose(CALL_INFO, 1, 0, "Ariel-MPI: MPI launcher: %s\n", mpilauncher.c_str());
-        output->verbose(CALL_INFO, 1, 0, "Ariel-MPI: MPI ranks: %d\n", mpiranks);
-        output->verbose(CALL_INFO, 1, 0, "Ariel-MPI: MPI trace rank: %d\n", mpitracerank);
-    }
-
-    uint32_t mpi_args = 0;
-    if (mpimode == 1) {
-        // We need one argument for the launcher, one for the number of ranks,
-        // and one for the rank to trace
-        mpi_args = 3;
-    }
-
-    // Put together execution command
-    execute_args = (char**) malloc(sizeof(char*) * (mpi_args + app_argc + 3));
-    uint32_t arg = 0; // Track current arg
-
-    if (mpimode == 1) {
-        // Prepend mpilauncher to execute_args
-        output->verbose(CALL_INFO, 1, 0, "Processing mpilauncher arguments...\n");
-        std::string mpiranks_str = std::to_string(mpiranks);
-        std::string mpitracerank_str = std::to_string(mpitracerank);
-
-        size_t mpilauncher_size = sizeof(char) * (mpilauncher.size() + 2);
-        execute_args[arg] = (char*) malloc(mpilauncher_size);
-        snprintf(execute_args[arg], mpilauncher_size, "%s", mpilauncher.c_str());
-        arg++;
-
-        size_t mpiranks_str_size = sizeof(char) * (mpiranks_str.size() + 2);
-        execute_args[arg] = (char*) malloc(mpiranks_str_size);
-        snprintf(execute_args[arg], mpiranks_str_size, "%s", mpiranks_str.c_str());
-        arg++;
-
-        size_t mpitracerank_str_size = sizeof(char) * (mpitracerank_str.size() + 2);
-        execute_args[arg] = (char*) malloc(mpitracerank_str_size);
-        snprintf(execute_args[arg], mpitracerank_str_size, "%s", mpitracerank_str.c_str());
-        arg++;
-
-        execute_args[arg++] = const_cast<char*>("--");
-    }
-
-    output->verbose(CALL_INFO, 1, 0, "Processing application arguments...\n");
-    execute_args[arg++] = (char*) malloc(sizeof(char) * (executable.size() + 2));
-    strcpy(execute_args[arg-1], executable.c_str());
-
-    char* argv_buffer = (char*) malloc(sizeof(char) * 256);
-    for(uint32_t aa = 0; aa < app_argc ; ++aa) {
-        snprintf(argv_buffer, sizeof(char)*256, "apparg%" PRIu32, aa);
-        std::string argv_i = params.find<std::string>(argv_buffer, "");
-
-        output->verbose(CALL_INFO, 1, 0, "Found application argument %" PRIu32 " (%s) = %s\n",
-                aa, argv_buffer, argv_i.c_str());
-        execute_args[arg] = (char*) malloc(sizeof(char) * (argv_i.size() + 1));
-        strcpy(execute_args[arg], argv_i.c_str());
-        arg++;
-    }
-    free(argv_buffer);
-
-    output->verbose(CALL_INFO, 1, 0, "Completed processing application arguments.\n");
 
     // Remember that the list of arguments must be NULL terminated for execution
-    execute_args[arg] = NULL;
+    //execute_args[arg] = NULL;
 
     output->verbose(CALL_INFO, 1, 0, "Completed initialization of the Ariel CPU.\n");
     fflush(stdout);
 }
 
-void EPAFrontend::init(unsigned int phase)
-{
-    if (phase == 0) {
-        // Init the child_pid = 0, this prevents problems in emergencyShutdown()
-        // if forkChild() calls fatal (i.e. the child_pid would not be set)
-        child_pid = 0;
-        if (mpimode == 1) {
-            // Ariel will fork the MPI launcher which will itself fork the app
-            child_pid = forkChild(mpilauncher.c_str(), execute_args, execute_env, epa_redirect_info);
-        } else {
-            child_pid = forkChild(executable.c_str(), execute_args, execute_env, epa_redirect_info);
-        }
-        output->verbose(CALL_INFO, 1, 0, "Waiting for child to attach.\n");
-        tunnel->waitForChild();
-        output->verbose(CALL_INFO, 1, 0, "Child has attached!\n");
-    }
-}
-
-void EPAFrontend::finish() {
-    // If the simulation ended early, e.g. by using --stop-at, the child
-    // may still be executing. It will become a zombie if we do not
-    // kill it.
-    if (child_pid != 0) {
-        kill(child_pid, SIGKILL);
-    }
-}
-
-ArielTunnel* EPAFrontend::getTunnel() {
-    return tunnel;
-}
-
-int EPAFrontend::forkChild(const char* app, char** args, std::map<std::string, std::string>& app_env, epa_redirect_info_t epa_redirect_info) {
+int EPAFrontend::forkChildProcess(const char* app, char** args, std::map<std::string, std::string>& app_env, ariel_redirect_info_t redirect_info) {
     // If user only wants to init the simulation then we do NOT fork the binary
     if(isSimulationRunModeInit())
         return 0;
@@ -283,29 +159,29 @@ int EPAFrontend::forkChild(const char* app, char** args, std::map<std::string, s
         // Pass the rank the user wants to trace to the EPA library
         setenv("METASIM_SST_TRACE_RANK", mpitracerank_str.c_str(), 1);
         //Do I/O redirection before exec
-        if ("" != epa_redirect_info.stdin_file) {
-            output->verbose(CALL_INFO, 1, 0, "Redirecting child stdin from file %s\n", epa_redirect_info.stdin_file.c_str());
-            if (!freopen(epa_redirect_info.stdin_file.c_str(), "r", stdin)) {
+        if ("" != redirect_info.stdin_file) {
+            output->verbose(CALL_INFO, 1, 0, "Redirecting child stdin from file %s\n", redirect_info.stdin_file.c_str());
+            if (!freopen(redirect_info.stdin_file.c_str(), "r", stdin)) {
                 output->fatal(CALL_INFO, 1, 0, "Failed to redirect stdin\n");
             }
         }
-        if ("" != epa_redirect_info.stdout_file) {
-            output->verbose(CALL_INFO, 1, 0, "Redirecting child stdout to file %s\n", epa_redirect_info.stdout_file.c_str());
+        if ("" != redirect_info.stdout_file) {
+            output->verbose(CALL_INFO, 1, 0, "Redirecting child stdout to file %s\n", redirect_info.stdout_file.c_str());
             std::string mode = "w+";
-            if (epa_redirect_info.stdoutappend) {
+            if (redirect_info.stdoutappend) {
                 mode = "a+";
             }
-            if (!freopen(epa_redirect_info.stdout_file.c_str(), mode.c_str(), stdout)) {
+            if (!freopen(redirect_info.stdout_file.c_str(), mode.c_str(), stdout)) {
                 output->fatal(CALL_INFO, 1, 0, "Failed to redirect stdout\n");
             }
         }
-        if ("" != epa_redirect_info.stderr_file) {
-            output->verbose(CALL_INFO, 1, 0, "Redirecting child stderr from file %s\n", epa_redirect_info.stderr_file.c_str());
+        if ("" != redirect_info.stderr_file) {
+            output->verbose(CALL_INFO, 1, 0, "Redirecting child stderr from file %s\n", redirect_info.stderr_file.c_str());
             std::string mode = "w+";
-            if (epa_redirect_info.stderrappend) {
+            if (redirect_info.stderrappend) {
                 mode = "a+";
             }
-            if (!freopen(epa_redirect_info.stderr_file.c_str(), mode.c_str(), stderr)) {
+            if (!freopen(redirect_info.stderr_file.c_str(), mode.c_str(), stderr)) {
                 output->fatal(CALL_INFO, 1, 0, "Failed to redirect stderr\n");
             }
         }
@@ -340,10 +216,70 @@ EPAFrontend::~EPAFrontend() {
 }
 
 void EPAFrontend::emergencyShutdown() {
-    // If child_pid = 0, dont kill (this would kill all processes of the group)
-    if (child_pid != 0) {
-        kill(child_pid, SIGKILL);
+    delete tunnelmgr; // Clean up tmp file
+    ArielFrontendCommon::emergencyShutdown();
+}
+
+void EPAFrontend::setForkArguments() {
+    // Set all the arguments that will be passed to fork in `execute_args`
+
+    // First, allocate it. The number of args is going to be
+    //  - the ones required for mpi
+    //  - the ones required for the app
+
+    // MPI: We need one argument for the launcher, one for the number of ranks,
+    //      and one for the 
+    uint32_t mpi_arg_count = 0;
+    if (mpimode == 1) {
+        // We need one argument for the launcher, one for the number of ranks,
+        // one for the rank to trace, and one for the "--" (required by 
+        // mpilauncher)
+        mpi_arg_count = 4;
     }
 
-    delete tunnelmgr; // Clean up tmp file
+    // Allocate
+    execute_args = (char**) malloc(sizeof(char*) * (mpi_arg_count
+        + appargcount + 3));
+    uint32_t arg = 0; // Track current arg
+
+    // Next, set the arguments.
+    // Start with MPI
+    if (mpimode == 1) {
+        // Prepend mpilauncher to execute_args
+        output->verbose(CALL_INFO, 1, 0, "Processing mpilauncher arguments...\n");
+        std::string mpiranks_str = std::to_string(mpiranks);
+        std::string mpitracerank_str = std::to_string(mpitracerank);
+
+        size_t mpilauncher_size = sizeof(char) * (mpilauncher.size() + 2);
+        execute_args[arg] = (char*) malloc(mpilauncher_size);
+        snprintf(execute_args[arg], mpilauncher_size, "%s", mpilauncher.c_str());
+        arg++;
+
+        size_t mpiranks_str_size = sizeof(char) * (mpiranks_str.size() + 2);
+        execute_args[arg] = (char*) malloc(mpiranks_str_size);
+        snprintf(execute_args[arg], mpiranks_str_size, "%s", mpiranks_str.c_str());
+        arg++;
+
+        size_t mpitracerank_str_size = sizeof(char) * (mpitracerank_str.size() + 2);
+        execute_args[arg] = (char*) malloc(mpitracerank_str_size);
+        snprintf(execute_args[arg], mpitracerank_str_size, "%s", mpitracerank_str.c_str());
+        arg++;
+
+        execute_args[arg++] = const_cast<char*>("--");
+    }
+
+    // Application and application arguments
+    execute_args[arg++] = (char*) malloc(sizeof(char) * (executable.size() + 2));
+    strcpy(execute_args[arg-1], executable.c_str());
+
+    for (auto itr = app_arguments.begin(); itr != app_arguments.end(); itr++) {
+        std::string app_arg = (*itr);
+        execute_args[arg] = (char*) malloc(sizeof(char) * 
+            (app_arg.size() + 1));
+        strcpy(execute_args[arg], app_arg.c_str());
+        arg++;
+    }
+
+    // The list of arguments must be NULL terminated for execution
+    execute_args[arg] = NULL;
 }

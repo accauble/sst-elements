@@ -65,6 +65,8 @@ libariel_la_SOURCES = \
 	arieltexttracegen.h \
 	arieltexttracegen.cc \
 	arielfrontend.h \
+	arielfrontendcommon.h \
+	arielfrontendcommon.cc \
 	tb_header.h \
 	arielrtlev.h
 
