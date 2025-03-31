@@ -132,6 +132,7 @@ void ArielFrontendCommon::parseCommonSubComponentParams(Params& params) {
 
         output->verbose(CALL_INFO, 1, 0, "Found application argument %" PRIu32 " (%s) = %s\n",
                 aa, argv_buffer, argv_i.c_str());
+        app_arguments.push_back(argv_i);
     }
     free(argv_buffer);
 

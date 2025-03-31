@@ -346,7 +346,6 @@ VOID WriteInstructionRead(ADDRINT* address, UINT32 readSize, THREADID thr, ADDRI
 {
 
     const uint64_t addr64 = (uint64_t) address;
-    static std::set<uint64_t> reportedMemSeqs;
 
     ArielCommand ac;
 
@@ -357,13 +356,6 @@ VOID WriteInstructionRead(ADDRINT* address, UINT32 readSize, THREADID thr, ADDRI
     ac.inst.instClass = instClass;
     ac.inst.simdElemCount = simdOpWidth;
 
-    //fprintf(stderr, "ACC: ARIEL_PERFORM_READ: %#lx, %#lx\n", ac.instPtr,
-    //  ac.inst.addr);
-    if (reportedMemSeqs.count(ac.instPtr) == 0) {
-        fprintf(stderr, "ACC_ARIEL: instPtr=%#lx instClass=%d simdElemCount=%d command=%d size=%d\n", ac.instPtr, ac.inst.instClass, ac.inst.simdElemCount, ac.command, ac.inst.size);
-        reportedMemSeqs.insert(ac.instPtr);
-    }
-
     tunnel->writeMessage(thr, ac);
 }
 
@@ -372,7 +364,6 @@ VOID WriteInstructionWrite(ADDRINT* address, UINT32 writeSize, THREADID thr, ADD
 {
 
     const uint64_t addr64 = (uint64_t) address;
-    static std::set<uint64_t> reportedMemSeqs;
     ArielCommand ac;
 
     ac.command = ARIEL_PERFORM_WRITE;
@@ -398,13 +389,6 @@ VOID WriteInstructionWrite(ADDRINT* address, UINT32 writeSize, THREADID thr, ADD
     printf("\n");
 */
 
-    if (reportedMemSeqs.count(ac.instPtr) == 0) {
-        fprintf(stderr, "ACC_ARIEL: instPtr=%#lx instClass=%d simdElemCount=%d command=%d size=%d\n", ac.instPtr, ac.inst.instClass, ac.inst.simdElemCount, ac.command, ac.inst.size);
-        reportedMemSeqs.insert(ac.instPtr);
-    }
-
-    //fprintf(stderr, "ACC: ARIEL_PERFORM_WRITE: %#x, %#lx, %#lx, %d\n",
-    //  thr, ac.instPtr, ac.inst.addr, ac.inst.size);
     tunnel->writeMessage(thr, ac);
 }
 
@@ -508,9 +492,6 @@ VOID InstrumentInstruction(INS ins, VOID *v)
     RTN checkRtn = INS_Rtn(ins);
 
     if(!RTN_Valid(checkRtn))
-        return;
-    IMG img = SEC_Img(RTN_Sec(checkRtn));
-    if (!IMG_IsMainExecutable(img))
         return;
 
     std::string instCode = INS_Mnemonic(ins);
