@@ -36,10 +36,6 @@ EPAFrontend::EPAFrontend(ComponentId_t id, Params& params, uint32_t cores,
     // Parse parameters that all frontends have
     parseCommonSubComponentParams(params);
 
-    // Add ".arielinst" to the executable name (this is the instrumented
-    // app name)
-    executable.append(".arielinst");
-
     output->verbose(CALL_INFO, 1, 0, "Completed processing application arguments.\n");
 
     // Create Tunnel Manager and set the tunnel

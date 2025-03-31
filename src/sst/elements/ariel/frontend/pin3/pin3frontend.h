@@ -71,7 +71,6 @@ class Pin3Frontend : public ArielFrontendCommon {
         {"arielinterceptcalls", "Toggle intercepting library calls", "0"},
         {"arielstack", "Dump stack on malloc calls (also requires enabling arielinterceptcalls). May increase overhead due to keeping a shadow stack.", "0"},
         {"mallocmapfile", "File with valid 'ariel_malloc_flag' ids", ""})
-//        {"tracePrefix", "Prefix when tracing is enable", ""},
 
         /* Ariel class */
         Pin3Frontend(ComponentId_t id, Params& params, uint32_t cores,
