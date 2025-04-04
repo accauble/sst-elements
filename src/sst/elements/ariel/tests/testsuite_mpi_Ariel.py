@@ -214,7 +214,7 @@ class testcase_Ariel(SSTTestCase):
     @unittest.skipIf(multi_rank, multi_rank_error_msg)
     @unittest.skipIf(using_osx, osx_error_msg)
     def test_Ariel_mpi_reduce_02_epa(self):
-        self.ariel_Template(threads=2, ranks=2, program="reduce")
+        self.ariel_Template(threads=2, ranks=2, program="reduce", frontend="epa")
 
     @unittest.skipIf(not mpilauncher_exists, mpi_error_msg)
     @unittest.skipIf(not pin_loaded, pin_error_msg)
@@ -228,7 +228,7 @@ class testcase_Ariel(SSTTestCase):
     @unittest.skipIf(multi_rank, multi_rank_error_msg)
     @unittest.skipIf(using_osx, osx_error_msg)
     def test_Ariel_mpi_reduce_03_epa(self):
-        self.ariel_Template(threads=2, ranks=4, program="reduce", tracerank=1)
+        self.ariel_Template(threads=2, ranks=4, program="reduce", tracerank=1, frontend="epa")
 
     def ariel_Template(self, threads, ranks, program="hello", tracerank=0, testtimeout=60, size=8000, frontend="pin"):
         # Set the paths to the various directories
