@@ -89,11 +89,9 @@ void ArielFrontendCommon::parseCommonSubComponentParams(Params& params) {
 
     // MPI Launcher options
     mpimode = params.find<int>("mpimode", 0);
-    if (mpimode) {
-        mpilauncher = params.find<std::string>("mpilauncher",  ARIEL_STRINGIZE(MPILAUNCHER_EXECUTABLE));
-        mpiranks = params.find<int>("mpiranks", 1);
-        mpitracerank = params.find<int>("mpitracerank", 0);
-    }
+    mpilauncher = params.find<std::string>("mpilauncher",  ARIEL_STRINGIZE(MPILAUNCHER_EXECUTABLE));
+    mpiranks = params.find<int>("mpiranks", 1);
+    mpitracerank = params.find<int>("mpitracerank", 0);
 
     // MPI Launcher error checking
     if (mpimode == 1) {

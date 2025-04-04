@@ -111,8 +111,9 @@ int EPAFrontend::forkChildProcess(const char* app, char** args, std::map<std::st
         // bad and eat your brains...
         child_pid = the_child;
 
-        // Wait a second, and check to see that the child actually started
-        sleep(1);
+        // Pin frontend waits a second here for the child to start. This does
+        // not appear to be necessary so commenting it out. 
+        // sleep(1);
         int pstat;
         pid_t check = waitpid(the_child, &pstat, WNOHANG);
         // If the child process is Stopped or Terminated
@@ -153,7 +154,16 @@ int EPAFrontend::forkChildProcess(const char* app, char** args, std::map<std::st
         // Tell the EPA Runtime library if we're using MPI
         setenv("METASIM_SST_USE_MPI", mpimode_str.c_str(), 1);
         // Pass the rank the user wants to trace to the EPA library
-        setenv("METASIM_SST_TRACE_RANK", mpitracerank_str.c_str(), 1);
+        if (mpimode == 1)
+            setenv("METASIM_SST_TRACE_RANK", mpitracerank_str.c_str(), 1);
+        // If startup_mode (arielmode) is 0, then delay tracing until
+        // ariel_enable is called -- cannot autodetect so fail on 2
+        if (startup_mode == 2)
+            output->fatal(CALL_INFO, 1, "EPA Frontend cannot autodetect arielmode\n");
+        else if (startup_mode == 1) // If trace entire thing
+            setenv("EPA_SLICER_START_OFF", "0", 1);
+        else
+            setenv("EPA_SLICER_START_OFF", "1", 1);
         //Do I/O redirection before exec
         if ("" != redirect_info.stdin_file) {
             output->verbose(CALL_INFO, 1, 0, "Redirecting child stdin from file %s\n", redirect_info.stdin_file.c_str());

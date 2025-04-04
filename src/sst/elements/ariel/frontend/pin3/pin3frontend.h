@@ -78,7 +78,6 @@ class Pin3Frontend : public ArielFrontendCommon {
         ~Pin3Frontend();
 
         virtual void emergencyShutdown();
-        //virtual void init(unsigned int phase);
 
     private:
 

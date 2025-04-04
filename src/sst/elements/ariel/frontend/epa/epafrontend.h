@@ -54,7 +54,6 @@ class EPAFrontend : public ArielFrontendCommon {
         ~EPAFrontend();
 
         virtual void emergencyShutdown();
-        //virtual void init(unsigned int phase);
 
     private:
 
